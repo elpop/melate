@@ -1,8 +1,9 @@
 # melate
 Mexican version of lottery (lotto).
 
-# Summary
+## Summary
 
+```
 Usage:
     melate.pl [options]
 
@@ -75,4 +76,4 @@ Options:
 
     -help or -h or -?
             Show this help
-
+```
