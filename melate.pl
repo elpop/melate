@@ -61,7 +61,7 @@ GetOptions(\%options,
 
 my $init_flag = 0;
 
-my $work_dir = $ENV{'HOME'} . '/.lotto'; # keys directory
+my $work_dir = $ENV{'HOME'} . '/.melate'; # keys directory
 # if not exists the work directory, creates and put the init_flag on
 unless (-e "$work_dir") {
     mkdir($work_dir);
