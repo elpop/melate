@@ -1,4 +1,7 @@
 # melate
+
+## Description
+
 Mexican version of lottery (lotto).
 
 ## Summary
@@ -77,3 +80,73 @@ Options:
     -help or -h or -?
             Show this help
 ```
+## Install
+
+1. Download file
+  
+    ```
+    git clone https://github.com/elpop/melate.git
+    ```  
+
+2. Install SQLite:
+
+   The programs use SQLite. This is available for default in Mac OS and the most popular Linux distros.
+   
+    for Debian/Ubuntu Linux systems:
+    
+    ```
+    sudo apt-get install sqlite3 libsqlite3-dev
+    ```
+    
+    Fedora/Red-Hat Linux systems:
+    
+    ```
+    sudo dnf install sqlite sqlite-devel 
+    ```
+    
+3. Perl Dependencies
+    
+    [File::Copy](https://metacpan.org/pod/File::Copy)
+    
+    [Text::Diff](https://metacpan.org/pod/Text::Diff)
+    
+    [Getopt::Long](https://metacpan.org/pod/Getopt::Long)
+    
+    [Pod::Usage](https://metacpan.org/pod/Pod::Usage)
+
+    [DBI](https://metacpan.org/pod/DBI)
+
+    [DBD::SQLite](https://metacpan.org/pod/DBD::SQLite)
+
+    All the Perl Moules are available via [metacpan](https://metacpan.org) or install via "cpan" program in your system. Debian/Ubuntu and Fedora has packages for the perl modules.
+    
+4. Put on your search path
+    
+    Copy the ga_cli.pl program somewhere in your search path:
+    
+    ```
+    cp melate.pl /usr/local/bin/.
+    ```
+    
+## Initial run
+
+the program create a hidden directory ".melate" in your HOME path.
+
+into th directory create the sqlite DB called "melate.db" and a results directory for process the files from the lottery authority.
+
+when you run for the firs time you see the following:
+
+```
+    Init DB
+    Download results from Pronosticos Deportivos
+    Melate
+    Revancha
+    Revanchita
+    Melate Retro
+    Error: no option found
+```
+
+     
+Now, you can use the program, you can update the results database with the -dowload option.
+
+
