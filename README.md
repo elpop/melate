@@ -147,6 +147,8 @@ when you run for the firs time you see the following:
 ```
 
      
-Now, you can use the program, you can update the results database with the -dowload option.
+Now, you can use the program :)
+
+you can update the results database with the -dowload option.
 
 
