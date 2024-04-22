@@ -1,6 +1,8 @@
 # melate
 Mexican version of lottery (lotto).
+
 # Summary
+
 Usage:
     melate.pl [options]
 
