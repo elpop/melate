@@ -4,6 +4,8 @@
 
 Mexican version of lottery (lotto).
 
+![light panel](https://raw.githubusercontent.com/elpop/melate/master/melate.png)
+
 ## Summary
 
 ```
