@@ -56,6 +56,7 @@ GetOptions(\%options,
            'download',
            'totals',
            'awards',
+           'plain',
            'help|?',
 );
 
@@ -301,15 +302,20 @@ sub lottery {
     unless ($options{'totals'}) {
         # Print header numbers
         my $x_rep = (3 * $nummax) +5;
-        print BG_CYAN . '  #  ';
+        print BG_CYAN unless($options{'plain'});
+        print '  #  ';
         for (my $i = 1;$i<=$nummax;$i++) {
          print sprintf("%02d ",$i);
         }
-        print RESET. "\n";
+        print RESET unless($options{'plain'});
+        print "\n";
 
         # Print draws and order the numbers output
         foreach my $sorteo (sort { $b <=> $a } keys %res) {
-            print BG_CYAN . sprintf("%04d",$sorteo) . RESET . ' ';
+            print BG_CYAN unless($options{'plain'});
+            print sprintf("%04d",$sorteo);
+            print RESET  unless($options{'plain'});
+            print ' ';
             #        foreach my $num (sort { $a <=> $b } keys %{$res{$sorteo}}) {
             for (my $i = 1;$i<=$nummax;$i++) {
                 if (exists($res{$sorteo}{$i})) {
@@ -322,7 +328,8 @@ sub lottery {
             print "\n";
         }
         # Print the occurrence of a number
-        print BG_CYAN . BRIGHT. FG_BLACK . '     ';
+        print BG_CYAN . BRIGHT. FG_BLACK  unless($options{'plain'});
+        print '     ';
         for (my $i = 1;$i<=$nummax;$i++) {
              if (exists($prono{$i})) {
                  print sprintf("%02d ",$prono{$i});
@@ -331,12 +338,13 @@ sub lottery {
                  print '   ';
              }
         }
-        print RESET . "\n\n";
+        print RESET unless($options{'plain'});
+        print "\n\n";
     }
 
     # Print the numbers order by occurency
     my $aux = 0;
-    print FG_GREEN;
+    print FG_GREEN  unless($options{'plain'});
     foreach my $name (sort { $prono{$b} <=> $prono{$a} or $a <=> $b} keys %prono) {
         if ( $aux ne $prono{$name} ) {
             print '  ';
@@ -344,9 +352,9 @@ sub lottery {
         }
         print sprintf("%02d",$name) . ' ';
     }
-    print RESET;
+    print RESET unless($options{'plain'});
     print "\n";
-    print FG_YELLOW;
+    print FG_YELLOW unless($options{'plain'});
     foreach my $name (sort { $prono{$b} <=> $prono{$a} or $a <=> $b} keys %prono) {
         if ( $aux ne $prono{$name} ) {
             print '  ';
@@ -354,7 +362,7 @@ sub lottery {
         }
         print sprintf("%02d",$prono{$name}) . ' ';
     }
-    print RESET;
+    print RESET unless($options{'plain'});
     print "\n\n";
 
 } # End sub Lottery
@@ -459,6 +467,18 @@ only the totals of the analysis:
     or
 
     melate.pl -l melate -c 20 -t
+
+=item B<-plain or -p>
+
+Used with the -lottery (or -l) option, Don't show termina text color.
+
+This to make printable output or genrate files without escape codes.
+
+    melate.pl -lottery melate -count 20 -p
+
+    or
+
+    melate.pl -l melate -c 20 -p
 
 =item B<-download or -d>
 
