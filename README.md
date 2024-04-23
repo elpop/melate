@@ -182,6 +182,6 @@ If you want to auto update the lottery results, edit your crontab and put:
 
 Thist run at 8 o'clock on Monday, Wednesday, Thursday, Saturday, and Sunday.
 
-The "Melate", "Revancha" and "Revanchita" results are available the Thursday, Saturday and Monday.
+The "Melate", "Revancha" and "Revanchita" results are available on Thursday, Saturday and Monday.
 
 "Retro" has results available on  Wednesday and Sunday.
