@@ -38,8 +38,8 @@ Options:
                 melate.pl -l melate -c 20
 
     -totals or -t
-            Used with the -lottery (or -l) option, Don't show the draws an
-            numbers matriz, only the totals of the analysis:
+            Used with the -lottery (or -l) option, Don't show the draws and
+            numbers matrix, only the totals of the analysis:
 
                 melate.pl -lottery melate -count 20 -totals
 
@@ -92,18 +92,18 @@ Options:
 
 2. Install SQLite:
 
-   The programs use SQLite. This is available for default in Mac OS and the most popular Linux distros.
+   The programs use SQLite and wget. This is available for default in Mac OS and the most popular Linux distros.
    
     for Debian/Ubuntu Linux systems:
     
     ```
-    sudo apt-get install sqlite3 libsqlite3-dev
+    sudo apt-get install sqlite3 libsqlite3-dev wget
     ```
     
     Fedora/Red-Hat Linux systems:
     
     ```
-    sudo dnf install sqlite sqlite-devel 
+    sudo dnf install sqlite sqlite-devel wget
     ```
     
 3. Perl Dependencies
@@ -121,6 +121,25 @@ Options:
     [DBD::SQLite](https://metacpan.org/pod/DBD::SQLite)
 
     All the Perl Moules are available via [metacpan](https://metacpan.org) or install via "cpan" program in your system. Debian/Ubuntu and Fedora has packages for the perl modules.
+    
+    for Fedora/Redhat:
+    
+    ```
+    sudo dnf install wget perl-File-Copy perl-Text-Diff perl-Getopt-Long perl-Pod-Usage perl-DBI perl-DBD-SQLite
+    ```
+    
+    for Debian/Ubuntu:
+    
+    ```
+    sudo apt-get install libdbi-perl libdbd-sqlite3-perl libtext-diff-perl
+    sudo cpan -i Getopt::Long Pod::Usage
+    ```
+    
+    On Mac OS you can use CPAN:
+    
+    ```
+    sudo cpan -i File::Copy Text::Diff Getopt::Long Pod::Usage DBI DBD::SQLite
+    ```
     
 4. Put on your search path
     

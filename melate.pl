@@ -451,7 +451,7 @@ Show the last number of draws of a given lottery name:
 
 =item B<-totals or -t>
 
-Used with the -lottery (or -l) option, Don't show the draws an numbers matriz,
+Used with the -lottery (or -l) option, Don't show the draws and numbers matrix,
 only the totals of the analysis:
 
     melate.pl -lottery melate -count 20 -totals
