@@ -47,6 +47,19 @@ Options:
 
                 melate.pl -l melate -c 20 -t
 
+    -plain or -p
+            Used with the -lottery (or -l) option, Don't show termina text
+            color.
+
+            This to make printable output or genrate files without escape
+            codes.
+
+                melate.pl -lottery melate -count 20 -p
+
+                or
+
+                melate.pl -l melate -c 20 -p
+
     -download or -d
             Download the results of draws of lottery products from the
             lottery authority and insert into the sqlite DB:
