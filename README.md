@@ -125,7 +125,7 @@ Options:
     for Fedora/Redhat:
     
     ```
-    sudo dnf install wget perl-File-Copy perl-Text-Diff perl-Getopt-Long perl-Pod-Usage perl-DBI perl-DBD-SQLite
+    sudo dnf install perl-File-Copy perl-Text-Diff perl-Getopt-Long perl-Pod-Usage perl-DBI perl-DBD-SQLite
     ```
     
     for Debian/Ubuntu:
@@ -172,4 +172,16 @@ Now, you can use the program :)
 
 you can update the results database with the -dowload option.
 
+## Crontab to update  results
 
+If you want to auto update the lottery results, edit your crontab and put:
+
+```
+0 8 * * 1,3,4,6,0 /usr/local/bin/melate.pl -d
+```
+
+Thist run at 8 o'clock on Monday, Wednesday, Thursday, Saturday, and Sunday.
+
+The "Melate", "Revancha" and "Revanchita" results are available the Thursday, Saturday and Monday.
+
+"Retro" has results available on  Wednesday and Sunday.
