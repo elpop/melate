@@ -159,7 +159,7 @@ Options:
     Copy the ga_cli.pl program somewhere in your search path:
     
     ```
-    cp melate.pl /usr/local/bin/.
+    sudo cp melate.pl /usr/local/bin/.
     ```
     
 ## Initial run
