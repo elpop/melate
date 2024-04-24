@@ -2,7 +2,7 @@
 
 ## Description
 
-Mexican version of lottery (lotto).
+Mexican version of lottery (lotto), but can easily modify for another local lotteries.
 
 ![light panel](https://raw.githubusercontent.com/elpop/melate/master/melate.png)
 
@@ -198,3 +198,8 @@ Thist run at 8 o'clock on Monday, Wednesday, Thursday, Saturday, and Sunday.
 The "Melate", "Revancha" and "Revanchita" results are available on Thursday, Saturday and Monday.
 
 "Retro" has results available on  Wednesday and Sunday.
+
+## If wou win...
+
+Please sponsor this proyect, or send a big tip to pay my high debt on credit cards :)
+
