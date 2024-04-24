@@ -233,7 +233,7 @@ sub download_results {
         # move working files
         move("$work_dir/results/$products_ref->{filename}.csv", "$work_dir/results/$products_ref->{filename}.old");
         # download with wget the results files
-        my $command = 'wget -q '  . $products_ref->{url} . ' --no-check-certificate -O ' . "$work_dir/results/$products_ref->{filename}" . '.csv';
+        my $command = '/usr/bin/wget -q '  . $products_ref->{url} . ' --no-check-certificate -O ' . "$work_dir/results/$products_ref->{filename}" . '.csv';
         my $ret = qx($command);
         # obtain only the difference of record to process
         my $diff = diff( "$work_dir/results/$products_ref->{filename}.old", "$work_dir/results/$products_ref->{filename}.csv");
