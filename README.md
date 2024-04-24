@@ -201,5 +201,5 @@ The "Melate", "Revancha" and "Revanchita" results are available on Thursday, Sat
 
 ## If you win...
 
-Please sponsor this proyect, or send a big tip to pay my high debt on credit cards :)
+Please sponsor this project, or send a big tip to pay my high debt on credit cards :)
 
