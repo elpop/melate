@@ -199,7 +199,7 @@ The "Melate", "Revancha" and "Revanchita" results are available on Thursday, Sat
 
 "Retro" has results available on  Wednesday and Sunday.
 
-## If wou win...
+## If you win...
 
 Please sponsor this proyect, or send a big tip to pay my high debt on credit cards :)
 
