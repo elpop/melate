@@ -265,6 +265,8 @@ sub download_results {
                 }
             }
         }
+        # remove old file
+        unlink("$work_dir/results/$products_ref->{filename}.old");
     }
     $sth->finish();
 } # end sub download_results()
