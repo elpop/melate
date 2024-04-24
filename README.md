@@ -156,7 +156,7 @@ Options:
     
 4. Put on your search path
     
-    Copy the ga_cli.pl program somewhere in your search path:
+    Copy the melate.pl program somewhere in your search path:
     
     ```
     sudo cp melate.pl /usr/local/bin/.
