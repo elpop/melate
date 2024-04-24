@@ -69,6 +69,9 @@ unless (-e "$work_dir") {
     $init_flag = 1;
 }
 
+#locate wget on your system
+my $wget = qx(/usr/bin/which wget);
+
 my $dbh = DBI->connect("dbi:SQLite:dbname=$work_dir/melate.db","","");
 $dbh->{PrintError} = 0; # Disable automatic  Error Handling
 
@@ -233,7 +236,7 @@ sub download_results {
         # move working files
         move("$work_dir/results/$products_ref->{filename}.csv", "$work_dir/results/$products_ref->{filename}.old");
         # download with wget the results files
-        my $command = '/usr/bin/wget -q '  . $products_ref->{url} . ' --no-check-certificate -O ' . "$work_dir/results/$products_ref->{filename}" . '.csv';
+        my $command = $wget . ' -q '  . $products_ref->{url} . ' --no-check-certificate -O ' . "$work_dir/results/$products_ref->{filename}" . '.csv';
         my $ret = qx($command);
         # obtain only the difference of record to process
         my $diff = diff( "$work_dir/results/$products_ref->{filename}.old", "$work_dir/results/$products_ref->{filename}.csv");
