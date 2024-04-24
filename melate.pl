@@ -141,11 +141,15 @@ sub init_db {
     $dbh->do($SQL_Code);
 } # End sub init_db()
 
-#-------------------------------------------#
-# Show the amount of awards of each lottery #
-#-------------------------------------------#
-sub awards {
-
+#----------------------------------------------#
+# Show the amount of awards of a given product #
+#----------------------------------------------#
+sub prize {
+    my $product = shift;
+    my $draw  = '';
+    my $date  = '';
+    my $prize = '';
+    
     # makes more friendly format
     sub _Money {
         my $number = shift;
@@ -154,19 +158,28 @@ sub awards {
         $number =~ s/^(-?)/$1\$/;
         return $number;
     } # End sub _Money()
+    
+    my $ret = $sth_results->execute($product,1);
+    while (my $results_ref = $sth_results->fetchrow_hashref) {
+        $draw  = $results_ref->{draw};
+        $date  = $results_ref->{date_time};
+        $prize = _Money($results_ref->{award});
+    }
+    $sth_results->finish();
+    return $draw, $date, $prize;
+}
 
+#-------------------------------------------#
+# Show the amount of awards of each lottery #
+#-------------------------------------------#
+sub awards {
     # Read each lottery name
     $SQL_Code = "select id, name from products;";
     my $sth = $dbh->prepare($SQL_Code);
     my $ret = $sth->execute();
     while (my $info_ref = $sth->fetchrow_hashref) {
         print "$info_ref->{name}\n";
-        # search the last award info of the draw
-        $ret = $sth_results->execute($info_ref->{id},1);
-        while (my $results_ref = $sth_results->fetchrow_hashref) {
-            print "    $results_ref->{draw}, $results_ref->{date_time}, " . _Money($results_ref->{award}) . "\n";
-        }
-        $sth_results->finish();
+        print sprintf("    %s, %s, %s\n",prize($info_ref->{id}) );
     }
     $sth->finish();
 } # End sub awards()
@@ -269,9 +282,14 @@ sub lottery {
     $SQL_Code = "select * from products where id = $prod;";
     my $sth = $dbh->prepare($SQL_Code);
     my $ret = $sth->execute();
+    my ($draw, $date, $prize) = prize($prod);
     while (my $info_ref = $sth->fetchrow_hashref) {
         $nummax = $info_ref->{range};
-        print "$info_ref->{name} ($cant)\n";
+        # print general lottery info;
+        print BG_RED . FG_WHITE . BRIGHT unless($options{'plain'});
+        print "Concurso: $info_ref->{name}    Fecha: $date    Premio: $prize    Muestras: $cant ";
+        print RESET unless($options{'plain'});
+        print "\n";
         # Search the resulst and draws of a lottery product
         $ret = $sth_results->execute($info_ref->{id},$cant);
         while (my $results_ref = $sth_results->fetchrow_hashref) {
@@ -305,7 +323,7 @@ sub lottery {
         print BG_CYAN unless($options{'plain'});
         print '  #  ';
         for (my $i = 1;$i<=$nummax;$i++) {
-         print sprintf("%02d ",$i);
+            print sprintf("%02d ",$i);
         }
         print RESET unless($options{'plain'});
         print "\n";
