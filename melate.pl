@@ -145,6 +145,22 @@ sub init_db {
     $dbh->do($SQL_Code);
 } # End sub init_db()
 
+#--------------------------------------#
+# Search if the record already exists  #
+#--------------------------------------#
+sub already_on_results {
+    my ($product, $draw) = @_;
+    my $already = 0;
+    $SQL_Code = "select product_id, draw from results where product_id = $product and draw = $draw;";
+    my $sth_read = $dbh->prepare($SQL_Code);
+    my $ret = $sth_read->execute();
+    while (my $read_ref = $sth_read->fetchrow_hashref) {
+        $already++;
+    }
+    $sth_read->finish();
+    return $already
+} # en sub _already_on_results()
+
 #----------------------------------------------#
 # Show the amount of awards of a given product #
 #----------------------------------------------#
@@ -208,26 +224,10 @@ sub download_results {
         close(TOUCH);
     }
 
-    # Prepare in advanced the querys
     $SQL_Code = "insert into results(product_id, draw, date_time, r1, r2, r3, r4, r5, r6, r7, award)
                                 values( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
     my $sth_insert = $dbh->prepare($SQL_Code);
-
-    $SQL_Code = "select product_id, draw from results where product_id = ? and draw = ?;";
-    my $sth_read = $dbh->prepare($SQL_Code);
-
-    # Check if the result exists previously
-    sub _already_on_results {
-        my ($product, $draw) = @_;
-        my $already = 0;
-        my $ret = $sth_read->execute($product, $draw);
-        while (my $read_ref = $sth_read->fetchrow_hashref) {
-            $already++;
-        }
-        $sth_read->finish();
-        return $already
-    } # en sub _already_on_results()
-
+        
     # Read each lottery information
     my $SQL_Code = "select * from products;";
     my $sth = $dbh->prepare($SQL_Code);
@@ -249,7 +249,7 @@ sub download_results {
                 my ($day, $month, $year) = split(/\//,$fecha);
                 my $date_time = sprintf("%04d-%02d-%02d",$year, $month, $day);
                 # insert the new record if not previously exists
-                unless( _already_on_results($prod, $sorteo) ) {
+                unless( already_on_results($prod, $sorteo) ) {
                     print "    $prod,$sorteo,$date_time, $r1,$r2,$r3,$r4,$r5,$r6,$r7,$acum\n" unless($init_flag);
                     $sth_insert->execute($prod,$sorteo,$date_time, $r1,$r2,$r3,$r4,$r5,$r6,$r7,$acum);
                 }
@@ -258,7 +258,7 @@ sub download_results {
                 my ($prod,$sorteo,$r1,$r2,$r3,$r4,$r5,$r6,$acum,$fecha) = split(/,/,$new);
                 my ($day, $month, $year) = split(/\//,$fecha);
                 my $date_time = sprintf("%04d-%02d-%02d",$year, $month, $day);
-                unless( _already_on_results($prod, $sorteo) ) {
+                unless( already_on_results($prod, $sorteo) ) {
                     print "    $prod,$sorteo,$date_time, $r1,$r2,$r3,$r4,$r5,$r6,$acum\n" unless($init_flag);
                     # insert the new record if not previously exists
                     $sth_insert->execute($prod,$sorteo,$date_time, $r1,$r2,$r3,$r4,$r5,$r6,'',$acum);
@@ -428,7 +428,7 @@ elsif ($options{'awards'}) {
     awards();
 }
 else {
-    print "Error: no option found\n";
+    print "Error: no option found\n" unless($init_flag);
 }
 
 $dbh->disconnect;
