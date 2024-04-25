@@ -54,9 +54,9 @@ GetOptions(\%options,
            'lottery=s',
            'count=i',
            'download',
-           'totals',
+           'summary',
+           'text',
            'awards',
-           'plain',
            'help|?',
 );
 
@@ -296,9 +296,9 @@ sub lottery {
     while (my $info_ref = $sth->fetchrow_hashref) {
         $nummax = $info_ref->{range};
         # print general lottery info;
-        print BG_RED . FG_WHITE . BRIGHT unless($options{'plain'});
+        print BG_RED . FG_WHITE . BRIGHT unless($options{'text'});
         print "Concurso: $info_ref->{name}    Fecha: $date    Premio: $prize    Muestras: $cant ";
-        print RESET unless($options{'plain'});
+        print RESET unless($options{'text'});
         print "\n";
         # Search the resulst and draws of a lottery product
         $ret = $sth_results->execute($info_ref->{id},$cant);
@@ -327,22 +327,22 @@ sub lottery {
         }
     }
     # if "totals" option is in not given, print the matrix of draws and winning numbers
-    unless ($options{'totals'}) {
+    unless ($options{'summary'}) {
         # Print header numbers
         my $x_rep = (3 * $nummax) +5;
-        print BG_CYAN unless($options{'plain'});
+        print BG_CYAN unless($options{'text'});
         print '  #  ';
         for (my $i = 1;$i<=$nummax;$i++) {
             print sprintf("%02d ",$i);
         }
-        print RESET unless($options{'plain'});
+        print RESET unless($options{'text'});
         print "\n";
 
         # Print draws and order the numbers output
         foreach my $sorteo (sort { $b <=> $a } keys %res) {
-            print BG_CYAN unless($options{'plain'});
+            print BG_CYAN unless($options{'text'});
             print sprintf("%04d",$sorteo);
-            print RESET  unless($options{'plain'});
+            print RESET  unless($options{'text'});
             print ' ';
             #        foreach my $num (sort { $a <=> $b } keys %{$res{$sorteo}}) {
             for (my $i = 1;$i<=$nummax;$i++) {
@@ -356,7 +356,7 @@ sub lottery {
             print "\n";
         }
         # Print the occurrence of a number
-        print BG_CYAN . BRIGHT. FG_BLACK  unless($options{'plain'});
+        print BG_CYAN . BRIGHT. FG_BLACK  unless($options{'text'});
         print '     ';
         for (my $i = 1;$i<=$nummax;$i++) {
              if (exists($prono{$i})) {
@@ -366,13 +366,13 @@ sub lottery {
                  print '   ';
              }
         }
-        print RESET unless($options{'plain'});
+        print RESET unless($options{'text'});
         print "\n\n";
     }
 
     # Print the numbers order by occurency
     my $aux = 0;
-    print FG_GREEN  unless($options{'plain'});
+    print FG_GREEN  unless($options{'text'});
     foreach my $name (sort { $prono{$b} <=> $prono{$a} or $a <=> $b} keys %prono) {
         if ( $aux ne $prono{$name} ) {
             print '  ';
@@ -380,9 +380,9 @@ sub lottery {
         }
         print sprintf("%02d",$name) . ' ';
     }
-    print RESET unless($options{'plain'});
+    print RESET unless($options{'text'});
     print "\n";
-    print FG_YELLOW unless($options{'plain'});
+    print FG_YELLOW unless($options{'text'});
     foreach my $name (sort { $prono{$b} <=> $prono{$a} or $a <=> $b} keys %prono) {
         if ( $aux ne $prono{$name} ) {
             print '  ';
@@ -390,7 +390,7 @@ sub lottery {
         }
         print sprintf("%02d",$prono{$name}) . ' ';
     }
-    print RESET unless($options{'plain'});
+    print RESET unless($options{'text'});
     print "\n\n";
 
 } # End sub Lottery
@@ -485,42 +485,6 @@ Show the last number of draws of a given lottery name:
 
     melate.pl -l melate -c 20
 
-=item B<-totals or -t>
-
-Used with the -lottery (or -l) option, Don't show the draws and numbers matrix,
-only the totals of the analysis:
-
-    melate.pl -lottery melate -count 20 -totals
-
-    or
-
-    melate.pl -l melate -c 20 -t
-
-=item B<-plain or -p>
-
-Used with the -lottery (or -l) option, Don't show termina text color.
-
-This to make printable output or genrate files without escape codes.
-
-    melate.pl -lottery melate -count 20 -p
-
-    or
-
-    melate.pl -l melate -c 20 -p
-
-    you can make a bash script to send the print output to file
-
-        #!/bin/bash
-        PRODUCT="melate revancha revanchita retro"
-        NUMBER="20 10"
-        for prod in $PRODUCT
-        do
-            for count in $NUMBER
-            do
-                /usr/local/bin/melate.pl -l $prod -c $count -p > $prod"_"$count.log
-            done
-        done
-
 =item B<-download or -d>
 
 Download the results of draws of lottery products from the lottery authority
@@ -554,6 +518,42 @@ And show (for example):
         3890, 2024-04-21, $330,600,000.00
     Melate Retro
         1418, 2024-04-20, $5,100,000.00
+
+=item B<-summary or -s>
+
+Used with the -lottery (or -l) option, Don't show the draws and numbers matrix,
+only the summary of the analysis:
+
+    melate.pl -lottery melate -count 20 -summary
+
+    or
+
+    melate.pl -l melate -c 20 -s
+
+=item B<-text or -t>
+
+Used with the -lottery (or -l) option, Don't show termina text color.
+
+This to make printable output or generate files without escape codes.
+
+    melate.pl -lottery melate -count 20 -text
+
+    or
+
+    melate.pl -l melate -c 20 -t
+
+    you can make a bash script to send the print output to file
+
+        #!/bin/bash
+        PRODUCT="melate revancha revanchita retro"
+        NUMBER="20 10"
+        for prod in $PRODUCT
+        do
+            for count in $NUMBER
+            do
+                /usr/local/bin/melate.pl -l $prod -c $count -t > $prod"_"$count.log
+            done
+        done
 
 =item B<-help or -h or -?>
 
