@@ -103,9 +103,9 @@ Options:
     git clone https://github.com/elpop/melate.git
     ```  
 
-2. Install SQLite:
+2. Install SQLite and wget:
 
-   The programs use SQLite and wget. This is available for default in Mac OS and the most popular Linux distros.
+   The programs use SQLite and wget. This is available for Mac OS and the most popular Linux distros.
    
     for Debian/Ubuntu Linux systems:
     
@@ -117,6 +117,21 @@ Options:
     
     ```
     sudo dnf install sqlite sqlite-devel wget
+    ```
+    
+    Mac OS
+    
+    SQLite is available by default. "wget" is not in the default distribution.
+    
+    The easy way to obtain the program, is using [Homebrew](https://brew.sh):
+    
+    ```
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    ```
+    and then:
+    
+    ```
+    brew install wget
     ```
     
 3. Perl Dependencies
