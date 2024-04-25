@@ -80,15 +80,25 @@ $dbh->{PrintError} = 0; # Disable automatic  Error Handling
 if ($init_flag) {
     # init the db schema
     init_db();
-    # Load the results
-    download_results();
-    # clean up the DB
-    $dbh->do('vacuum;');
 }
 
 # prepare in advanced the read results query
 my $SQL_Code = "select * from results where product_id = ? order by draw desc limit ?;";
 my $sth_results = $dbh->prepare($SQL_Code);
+
+$SQL_Code = "select product_id, draw from results where product_id = ? and draw = ?;";
+my $sth_read = $dbh->prepare($SQL_Code);
+
+$SQL_Code = "insert into results(product_id, draw, date_time, r1, r2, r3, r4, r5, r6, r7, award)
+                            values( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
+my $sth_insert = $dbh->prepare($SQL_Code);
+
+if ($init_flag) {
+    # Load the results
+    download_results();
+    # clean up the DB
+    $dbh->do('vacuum;');
+}
 
 #-------------------------------------------#
 # Create the initial SQLite database schema #
@@ -151,9 +161,7 @@ sub init_db {
 sub already_on_results {
     my ($product, $draw) = @_;
     my $already = 0;
-    $SQL_Code = "select product_id, draw from results where product_id = $product and draw = $draw;";
-    my $sth_read = $dbh->prepare($SQL_Code);
-    my $ret = $sth_read->execute();
+    my $ret = $sth_read->execute($product,$draw);
     while (my $read_ref = $sth_read->fetchrow_hashref) {
         $already++;
     }
@@ -223,10 +231,6 @@ sub download_results {
         open(TOUCH, ">", "$work_dir/results/Retro.csv") or die;
         close(TOUCH);
     }
-
-    $SQL_Code = "insert into results(product_id, draw, date_time, r1, r2, r3, r4, r5, r6, r7, award)
-                                values( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
-    my $sth_insert = $dbh->prepare($SQL_Code);
         
     # Read each lottery information
     my $SQL_Code = "select * from products;";
