@@ -59,6 +59,19 @@ Options:
                 or
 
                 melate.pl -l melate -c 20 -p
+            
+            you can make a bash script to send the print output to file
+
+                #!/bin/bash
+                PRODUCT="melate revancha revanchita retro"
+                NUMBER="20 10"
+                for prod in $PRODUCT
+                do
+                    for count in $NUMBER
+                    do
+                        /usr/local/bin/melate.pl -l $prod -c $count -p > $prod"_"$count.log
+                    done
+                done
 
     -download or -d
             Download the results of draws of lottery products from the
