@@ -206,7 +206,6 @@ when you run for the firs time you see the following:
     Revancha
     Revanchita
     Melate Retro
-    Error: no option found
 ```
 
      
