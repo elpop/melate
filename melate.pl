@@ -70,7 +70,7 @@ unless (-e "$work_dir") {
 }
 
 #locate wget on your system
-my $wget = qx(/usr/bin/which wget);
+my ($wget) = qx(/usr/bin/which wget);
 chomp($wget);
 
 my $dbh = DBI->connect("dbi:SQLite:dbname=$work_dir/melate.db","","");
