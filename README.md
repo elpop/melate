@@ -148,7 +148,7 @@ Options:
 
     [DBD::SQLite](https://metacpan.org/pod/DBD::SQLite)
 
-    All the Perl Moules are available via [metacpan](https://metacpan.org) or install via "cpan" program in your system. Debian/Ubuntu and Fedora has packages for the perl modules.
+    All the Perl Modules are available via [metacpan](https://metacpan.org) or install via "cpan" program in your system. Debian/Ubuntu and Fedora has packages for the perl modules.
     
     for Fedora/Redhat:
     
