@@ -37,42 +37,6 @@ Options:
 
                 melate.pl -l melate -c 20
 
-    -totals or -t
-            Used with the -lottery (or -l) option, Don't show the draws and
-            numbers matrix, only the totals of the analysis:
-
-                melate.pl -lottery melate -count 20 -totals
-
-                or
-
-                melate.pl -l melate -c 20 -t
-
-    -plain or -p
-            Used with the -lottery (or -l) option, Don't show termina text
-            color.
-
-            This to make printable output or genrate files without escape
-            codes.
-
-                melate.pl -lottery melate -count 20 -p
-
-                or
-
-                melate.pl -l melate -c 20 -p
-            
-            you can make a bash script to send the print output to file
-
-                #!/bin/bash
-                PRODUCT="melate revancha revanchita retro"
-                NUMBER="20 10"
-                for prod in $PRODUCT
-                do
-                    for count in $NUMBER
-                    do
-                        /usr/local/bin/melate.pl -l $prod -c $count -p > $prod"_"$count.log
-                    done
-                done
-
     -download or -d
             Download the results of draws of lottery products from the
             lottery authority and insert into the sqlite DB:
@@ -105,9 +69,46 @@ Options:
                 Melate Retro
                     1418, 2024-04-20, $5,100,000.00
 
+    -summary or -s
+            Used with the -lottery (or -l) option, Don't show the draws and
+            numbers matrix, only the summary of the analysis:
+
+                melate.pl -lottery melate -count 20 -summary
+
+                or
+
+                melate.pl -l melate -c 20 -s
+
+    -text or -t
+            Used with the -lottery (or -l) option, Don't show termina text
+            color.
+
+            This to make printable output or generate files without escape
+            codes.
+
+                melate.pl -lottery melate -count 20 -text
+
+                or
+
+                melate.pl -l melate -c 20 -t
+
+                you can make a bash script to send the print output to file
+
+                    #!/bin/bash
+                    PRODUCT="melate revancha revanchita retro"
+                    NUMBER="20 10"
+                    for prod in $PRODUCT
+                    do
+                        for count in $NUMBER
+                        do
+                            /usr/local/bin/melate.pl -l $prod -c $count -t > $prod"_"$count.log
+                        done
+                    done
+
     -help or -h or -?
             Show this help
 ```
+
 ## Install
 
 1. Download file
