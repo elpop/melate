@@ -117,36 +117,25 @@ Options:
     git clone https://github.com/elpop/melate.git
     ```  
 
-2. Install SQLite and wget:
+2. Install SQLite:
 
-   The programs use SQLite and wget. This is available for Mac OS and the most popular Linux distros.
+   The programs use SQLite. This is available for Mac OS and the most popular Linux distros.
    
     for Debian/Ubuntu Linux systems:
     
     ```
-    sudo apt-get install sqlite3 libsqlite3-dev wget
+    sudo apt-get install sqlite3 libsqlite3-dev
     ```
     
     Fedora/Red-Hat Linux systems:
     
     ```
-    sudo dnf install sqlite sqlite-devel wget
+    sudo dnf install sqlite sqlite-devel
     ```
     
     Mac OS
     
-    SQLite is available by default. "wget" is not in the default distribution.
-    
-    The easy way to obtain the program, is using [Homebrew](https://brew.sh):
-    
-    ```
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    ```
-    and then:
-    
-    ```
-    brew install wget
-    ```
+    SQLite is available by default. 
     
 3. Perl Dependencies
     
@@ -162,25 +151,27 @@ Options:
 
     [DBD::SQLite](https://metacpan.org/pod/DBD::SQLite)
 
+    [LWP::UserAgent](https://metacpan.org/pod/LWP::UserAgent)
+
     All the Perl Modules are available via [metacpan](https://metacpan.org) or install via "cpan" program in your system. Debian/Ubuntu and Fedora has packages for the perl modules.
     
     for Fedora/Redhat:
     
     ```
-    sudo dnf install perl-File-Copy perl-Text-Diff perl-Getopt-Long perl-Pod-Usage perl-DBI perl-DBD-SQLite
+    sudo dnf install perl-File-Copy perl-Text-Diff perl-Getopt-Long perl-Pod-Usage perl-DBI perl-DBD-SQLite perl-libwww-perl
     ```
     
     for Debian/Ubuntu:
     
     ```
-    sudo apt-get install libdbi-perl libdbd-sqlite3-perl libtext-diff-perl
+    sudo apt-get install libdbi-perl libdbd-sqlite3-perl libtext-diff-perl libwww-perl
     sudo cpan -i Getopt::Long Pod::Usage
     ```
     
     On Mac OS you can use CPAN:
     
     ```
-    sudo cpan -i File::Copy Text::Diff Getopt::Long Pod::Usage DBI DBD::SQLite
+    sudo cpan -i File::Copy Text::Diff Getopt::Long Pod::Usage DBI DBD::SQLite LWP::UserAgent;
     ```
     
 4. Put on your search path
