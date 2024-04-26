@@ -331,19 +331,20 @@ sub lottery {
         $nummax = $info_ref->{range};
         # print general lottery info;
         print BG_RED . FG_WHITE . BRIGHT unless($options{'text'});
-        print "Concurso: $info_ref->{name}    Fecha: $date    Premio: $prize    Muestras: $quantity ";
+        print "Product: $info_ref->{name}     Date: $date    Prize: $prize    Samples: $quantity ";
         print RESET unless($options{'text'});
         print "\n";
         # Search the resulst and draws of a lottery product
         $ret = $sth_results->execute($info_ref->{id},$quantity);
         while (my $results_ref = $sth_results->fetchrow_hashref) {
-            $results{$results_ref->{draw}}{$results_ref->{r1}} = $results_ref->{r1};
-            $results{$results_ref->{draw}}{$results_ref->{r2}} = $results_ref->{r2};
-            $results{$results_ref->{draw}}{$results_ref->{r3}} = $results_ref->{r3};
-            $results{$results_ref->{draw}}{$results_ref->{r4}} = $results_ref->{r4};
-            $results{$results_ref->{draw}}{$results_ref->{r5}} = $results_ref->{r5};
-            $results{$results_ref->{draw}}{$results_ref->{r6}} = $results_ref->{r6};
-            $results{$results_ref->{draw}}{$results_ref->{r7}} = $results_ref->{r7} if ($info_ref->{additional} == 1);
+            $results{$results_ref->{draw}}{date} = $results_ref->{date_time};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r1}} = $results_ref->{r1};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r2}} = $results_ref->{r2};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r3}} = $results_ref->{r3};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r4}} = $results_ref->{r4};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r5}} = $results_ref->{r5};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r6}} = $results_ref->{r6};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r7}} = $results_ref->{r7} if ($info_ref->{additional} == 1);
         }
         $sth_results->finish();
     }
@@ -351,7 +352,7 @@ sub lottery {
 
     # search numbers and add totals
     foreach my $draw  (sort { $results{$b} <=> $results{$a} }keys %results) {
-        foreach my $ball  (sort keys %{$results{$draw}}) {
+        foreach my $ball  (sort keys %{$results{$draw}{balls}}) {
             if (exists($totals{$ball})) {
                 $totals{$ball} = $totals{$ball} + 1;
             }
@@ -372,8 +373,8 @@ sub lottery {
     unless ($options{'summary'}) {
         # Print header numbers
         my $x_rep = (3 * $nummax) +5;
-        print BG_CYAN unless($options{'text'});
-        print '  #  ';
+        print BG_WHITE . BRIGHT . FG_BLACK unless($options{'text'});
+        print '  #     Date     ';
         for (my $i = 1;$i<=$nummax;$i++) {
             print sprintf("%02d ",$i);
         }
@@ -382,14 +383,17 @@ sub lottery {
 
         # Print draws and order the numbers output
         foreach my $draw (sort { $b <=> $a } keys %results) {
-            print BG_CYAN unless($options{'text'});
+            print BG_WHITE . BRIGHT .FG_BLACK unless($options{'text'});
             print sprintf("%04d",$draw);
+            print RESET  unless($options{'text'});
+            print BG_WHITE . FG_BLACK unless($options{'text'});
+            print " $results{$draw}{date} ";
             print RESET  unless($options{'text'});
             print ' ';
             #        foreach my $num (sort { $a <=> $b } keys %{$res{$sorteo}}) {
             for (my $i = 1;$i<=$nummax;$i++) {
-                if (exists($results{$draw}{$i})) {
-                    print sprintf("%02d ",$results{$draw}{$i});
+                if (exists($results{$draw}{balls}{$i})) {
+                    print sprintf("%02d ",$results{$draw}{balls}{$i});
                 }
                 else {
                     print '   ';
@@ -398,8 +402,8 @@ sub lottery {
             print "\n";
         }
         # Print the occurrence of a number
-        print BG_CYAN . BRIGHT. FG_BLACK  unless($options{'text'});
-        print '     ';
+        print BG_WHITE . BRIGHT . FG_BLACK  unless($options{'text'});
+        print '                 ';
         for (my $i = 1;$i<=$nummax;$i++) {
              if (exists($totals{$i})) {
                  print sprintf("%02d ",$totals{$i});
