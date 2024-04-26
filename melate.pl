@@ -219,8 +219,10 @@ sub get_file {
         agent => 'melate/1.0',
         keep_alive => 1,
         env_proxy  => 1,
+        ssl_opts => { verify_hostname => 0,
+                      SSL_verify_mode => 0x00,
+                    },
     );
-    $ua->ssl_opts(verify_hostname => 0);
     $| = 1;         # autoflush
     open(FILE, ">", $target) or $status = 0;
     if ($status) {
