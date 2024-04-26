@@ -508,7 +508,7 @@ melate.pl [options]
 
 =item B<-lottery or -l>
 
-The -lottery or -l option show the draws and result of a given lottery name:
+The -lottery or -l option shows the draws and results of a given lottery name:
 
     melate.pl -lottery melate
 
@@ -516,14 +516,14 @@ The -lottery or -l option show the draws and result of a given lottery name:
 
     melate.pl -l melate
 
-    The values could be "melate", "revancha", "revanchita" and "retro".
+    The values can "melate", "revancha", "revanchita" and "retro".
 
-    By default shows the lastes 30 draws, you can use the -count option to
+    By default shows the lastest 30 draws, you can use the -count option to
     modify this behavior.
 
 =item B<-count or -c>
 
-Show the last number of draws of a given lottery name:
+Show the last N number of draws of a given lottery name:
 
     melate.pl -lottery melate -count 20
 
@@ -534,7 +534,7 @@ Show the last number of draws of a given lottery name:
 =item B<-download or -d>
 
 Download the results of draws of lottery products from the lottery authority
-and insert into the sqlite DB:
+and insert them into the sqlite DB:
 
     melate.pl -download
 
@@ -546,7 +546,7 @@ and insert into the sqlite DB:
 
 =item B<-awards or -a>
 
-Search the last award information of each lottery product
+Search for the last award information of each lottery product
 
     melate.pl -award
 
@@ -567,7 +567,7 @@ And show (for example):
 
 =item B<-summary or -s>
 
-Used with the -lottery (or -l) option, Don't show the draws and numbers matrix,
+Used with the -lottery (or -l) option. Don't show the draws and numbers matrix,
 only the summary of the analysis:
 
     melate.pl -lottery melate -count 20 -summary
@@ -578,9 +578,9 @@ only the summary of the analysis:
 
 =item B<-text or -t>
 
-Used with the -lottery (or -l) option, Don't show termina text color.
+Used with the -lottery (or -l) option. Don't show terminal text color.
 
-This to make printable output or generate files without escape codes.
+Use this to make printable output or generate files without escape codes.
 
     melate.pl -lottery melate -count 20 -text
 
@@ -588,7 +588,7 @@ This to make printable output or generate files without escape codes.
 
     melate.pl -l melate -c 20 -t
 
-    you can make a bash script to send the print output to file
+    you can write a bash script to send the print output to file:
 
         #!/bin/bash
         PRODUCT="melate revancha revanchita retro"
