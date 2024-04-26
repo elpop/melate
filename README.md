@@ -158,20 +158,20 @@ Options:
     for Fedora/Redhat:
     
     ```
-    sudo dnf install perl-File-Copy perl-Text-Diff perl-Getopt-Long perl-Pod-Usage perl-DBI perl-DBD-SQLite perl-libwww-perl
+    sudo dnf install perl-File-Copy perl-Text-Diff perl-Getopt-Long perl-Pod-Usage perl-DBI perl-DBD-SQLite perl-libwww-perl perl-LWP-Protocol-https
     ```
     
     for Debian/Ubuntu:
     
     ```
-    sudo apt-get install libdbi-perl libdbd-sqlite3-perl libtext-diff-perl libwww-perl
+    sudo apt-get install libdbi-perl libdbd-sqlite3-perl libtext-diff-perl libwww-perl liblwp-protocol-https-perl
     sudo cpan -i Getopt::Long Pod::Usage
     ```
     
     On Mac OS you can use CPAN:
     
     ```
-    sudo cpan -i File::Copy Text::Diff Getopt::Long Pod::Usage DBI DBD::SQLite LWP::UserAgent;
+    sudo cpan -i File::Copy Text::Diff Getopt::Long Pod::Usage DBI DBD::SQLite LWP::UserAgent LWP::Protocol::https
     ```
     
 4. Put it on your search path
