@@ -13,11 +13,12 @@
 #                     (c) 2024 - Fernando Romo                        #
 #=====================================================================#
 use strict;
-use DBI;          # Interface to Database
-use File::Copy;   # File cp or mv
-use Text::Diff;   # Diff of text files
-use Getopt::Long; # Handle the arguments passed to the program
-use Pod::Usage;   # Perl documentation for help
+use DBI;            # Interface to Database
+use File::Copy;     # File cp or mv
+use Text::Diff;     # Diff of text files
+use Getopt::Long;   # Handle the arguments passed to the program
+use LWP::UserAgent; # Web user agent class
+use Pod::Usage;     # Perl documentation for help
 
 # Terminal Colors
 use constant {
@@ -212,6 +213,33 @@ sub awards {
     $sth->finish();
 } # End sub awards()
 
+#-----------------------------#
+# Get the file from http host #
+#-----------------------------#
+sub get_file {
+    my ($url,$target) = @_;
+    my $status = 1;
+    my $ua = LWP::UserAgent->new(
+        agent => 'melate/1.0',
+        keep_alive => 1,
+        env_proxy  => 1,
+    );
+    $ua->ssl_opts(verify_hostname => 0);
+    $| = 1;         # autoflush
+    open(FILE, ">", $target) or $status = 0;
+    if ($status) {
+        my $res = $ua->request(
+            HTTP::Request->new(GET => $url),
+            sub {
+                print FILE $_[0] or $status = 0 ;
+            }
+        );
+        close(FILE) or $status = 0 ;
+    }
+    undef $ua;
+    return $status;
+}
+
 #-----------------------------------------------#
 # Download the files from the lottery authority #
 # and insert the new results into the SQLite DB #
@@ -240,37 +268,44 @@ sub download_results {
         print "$products_ref->{name}\n";
         # move working files
         move("$work_dir/results/$products_ref->{filename}.csv", "$work_dir/results/$products_ref->{filename}.old");
-        # download with wget the results files
-        my $command = $wget . ' -q '  . $products_ref->{url} . ' --no-check-certificate -O ' . "$work_dir/results/$products_ref->{filename}" . '.csv';
-        my $ret = qx($command);
-        # obtain only the difference of record to process
-        my $diff = diff( "$work_dir/results/$products_ref->{filename}.old", "$work_dir/results/$products_ref->{filename}.csv");
-        my @changes = $diff =~ /\+(\d\d,.*?)\n/g;
-        # process each result and insert into the results table
-        foreach my $new (sort { $a <=> $b } @changes) {
-            if ($products_ref->{additional} == 1) {
-                my ($prod,$sorteo,$r1,$r2,$r3,$r4,$r5,$r6,$r7,$acum,$fecha) = split(/,/,$new);
-                my ($day, $month, $year) = split(/\//,$fecha);
-                my $date_time = sprintf("%04d-%02d-%02d",$year, $month, $day);
-                # insert the new record if not previously exists
-                unless( already_on_results($prod, $sorteo) ) {
-                    print "    $prod,$sorteo,$date_time, $r1,$r2,$r3,$r4,$r5,$r6,$r7,$acum\n" unless($init_flag);
-                    $sth_insert->execute($prod,$sorteo,$date_time, $r1,$r2,$r3,$r4,$r5,$r6,$r7,$acum);
-                }
-            }
-            else {
-                my ($prod,$sorteo,$r1,$r2,$r3,$r4,$r5,$r6,$acum,$fecha) = split(/,/,$new);
-                my ($day, $month, $year) = split(/\//,$fecha);
-                my $date_time = sprintf("%04d-%02d-%02d",$year, $month, $day);
-                unless( already_on_results($prod, $sorteo) ) {
-                    print "    $prod,$sorteo,$date_time, $r1,$r2,$r3,$r4,$r5,$r6,$acum\n" unless($init_flag);
+        # download with LWP::UserAgent, is faster than wget
+        my $process_flag = 0;
+        $process_flag = eval { get_file($products_ref->{url},"$work_dir/results/$products_ref->{filename}.csv") };
+        if ($process_flag) {        
+            # obtain only the difference of record to process
+            my $diff = diff( "$work_dir/results/$products_ref->{filename}.old", "$work_dir/results/$products_ref->{filename}.csv");
+            my @changes = $diff =~ /\+(\d\d,.*?)\n/g;
+            # process each result and insert into the results table
+            foreach my $new (sort { $a <=> $b } @changes) {
+                if ($products_ref->{additional} == 1) {
+                    my ($prod,$sorteo,$r1,$r2,$r3,$r4,$r5,$r6,$r7,$acum,$fecha) = split(/,/,$new);
+                    my ($day, $month, $year) = split(/\//,$fecha);
+                    my $date_time = sprintf("%04d-%02d-%02d",$year, $month, $day);
                     # insert the new record if not previously exists
-                    $sth_insert->execute($prod,$sorteo,$date_time, $r1,$r2,$r3,$r4,$r5,$r6,'',$acum);
+                    unless( already_on_results($prod, $sorteo) ) {
+                        print "    $prod,$sorteo,$date_time, $r1,$r2,$r3,$r4,$r5,$r6,$r7,$acum\n" unless($init_flag);
+                        $sth_insert->execute($prod,$sorteo,$date_time, $r1,$r2,$r3,$r4,$r5,$r6,$r7,$acum);
+                    }
+                }
+                else {
+                    my ($prod,$sorteo,$r1,$r2,$r3,$r4,$r5,$r6,$acum,$fecha) = split(/,/,$new);
+                    my ($day, $month, $year) = split(/\//,$fecha);
+                    my $date_time = sprintf("%04d-%02d-%02d",$year, $month, $day);
+                    unless( already_on_results($prod, $sorteo) ) {
+                        print "    $prod,$sorteo,$date_time, $r1,$r2,$r3,$r4,$r5,$r6,$acum\n" unless($init_flag);
+                        # insert the new record if not previously exists
+                        $sth_insert->execute($prod,$sorteo,$date_time, $r1,$r2,$r3,$r4,$r5,$r6,'',$acum);
+                    }
                 }
             }
+            # remove old file
+            unlink("$work_dir/results/$products_ref->{filename}.old");
+            
         }
-        # remove old file
-        unlink("$work_dir/results/$products_ref->{filename}.old");
+        else {
+            move("$work_dir/results/$products_ref->{filename}.old", "$work_dir/results/$products_ref->{filename}.csv");
+            print "Error: Problem downloading file from $products_ref->{url}\n";
+        }
     }
     $sth->finish();
 } # end sub download_results()
