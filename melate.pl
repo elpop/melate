@@ -360,6 +360,13 @@ sub lottery {
             }
         }
     }
+    
+    # search balls not in the draw and put 0 value
+    for (my $ball = 1;$ball <=$nummax;$ball++) {
+        unless (exists($totals{$ball})) {
+            $totals{$ball} = 0;
+        }
+    }
 
     # if "summary" option is in not given, print the matrix of draws and winning numbers
     unless ($options{'summary'}) {
@@ -404,7 +411,7 @@ sub lottery {
         print RESET unless($options{'text'});
         print "\n\n";
     }
-
+     
     # Print the numbers order by occurrences
     my $aux = 0;
     print FG_GREEN  unless($options{'text'});
