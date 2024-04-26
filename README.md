@@ -168,7 +168,16 @@ Options:
     sudo cpan -i Getopt::Long Pod::Usage
     ```
     
-    On Mac OS you can use CPAN:
+    On Mac OS:
+
+    To compile some Perl modules, you need to install the 
+    Xcode Command Line Tools:
+ 
+    ```
+    xcode-select --install
+    ```
+
+    Install with CPAN:
     
     ```
     sudo cpan -i File::Copy Text::Diff Getopt::Long Pod::Usage DBI DBD::SQLite LWP::UserAgent LWP::Protocol::https
