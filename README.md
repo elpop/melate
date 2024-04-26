@@ -2,7 +2,7 @@
 
 ## Description
 
-Mexican version of lottery (lotto), but can easily modify for another local lotteries.
+A Mexican version of lottery (lotto) and it can easily be modified to accommodate other local lotteries.
 
 ![light panel](https://raw.githubusercontent.com/elpop/melate/master/melate.png)
 
@@ -14,7 +14,7 @@ Usage:
 
 Options:
     -lottery or -l
-            The -lottery or -l option show the draws and result of a given
+            The -lottery or -l option shows the draws and results of a given
             lottery name:
 
                 melate.pl -lottery melate
@@ -23,13 +23,13 @@ Options:
 
                 melate.pl -l melate
 
-                The values could be "melate", "revancha", "revanchita" and "retro".
+                The values can be "melate", "revancha", "revanchita" and "retro".
     
-                By default shows the lastes 30 draws, you can use the -count option to
+                By default shows the latest 30 draws, you can use the -count option to
                 modify this behavior.
 
     -count or -c
-            Show the last number of draws of a given lottery name:
+            Show the last N number of draws of a given lottery name:
 
                 melate.pl -lottery melate -count 20
 
@@ -39,7 +39,7 @@ Options:
 
     -download or -d
             Download the results of draws of lottery products from the
-            lottery authority and insert into the sqlite DB:
+            lottery authority and insert them into a sqlite DB:
 
                 melate.pl -download
 
@@ -50,7 +50,7 @@ Options:
                 the operation could take a while.
 
     -awards or -a
-            Search the last award information of each lottery product
+            Search for the last award information of each lottery product
 
                 melate.pl -award
 
@@ -70,7 +70,7 @@ Options:
                     1418, 2024-04-20, $5,100,000.00
 
     -summary or -s
-            Used with the -lottery (or -l) option, Don't show the draws and
+            Used with the -lottery (or -l) option. Don't show the draws and
             numbers matrix, only the summary of the analysis:
 
                 melate.pl -lottery melate -count 20 -summary
@@ -80,10 +80,10 @@ Options:
                 melate.pl -l melate -c 20 -s
 
     -text or -t
-            Used with the -lottery (or -l) option, Don't show termina text
+            Used with the -lottery (or -l) option. Don't show terminal text
             color.
 
-            This to make printable output or generate files without escape
+            Use this to make printable output or generate files without escape
             codes.
 
                 melate.pl -lottery melate -count 20 -text
@@ -92,7 +92,7 @@ Options:
 
                 melate.pl -l melate -c 20 -t
 
-                you can make a bash script to send the print output to file
+                you can write a bash script to send the print output to file:
 
                     #!/bin/bash
                     PRODUCT="melate revancha revanchita retro"
@@ -153,7 +153,7 @@ Options:
 
     [LWP::UserAgent](https://metacpan.org/pod/LWP::UserAgent)
 
-    All the Perl Modules are available via [metacpan](https://metacpan.org) or install via "cpan" program in your system. Debian/Ubuntu and Fedora has packages for the perl modules.
+    All the Perl Modules are available via [metacpan](https://metacpan.org) or install them via the "cpan" program in your system. Debian/Ubuntu and Fedora have packages for the required perl modules.
     
     for Fedora/Redhat:
     
@@ -174,7 +174,7 @@ Options:
     sudo cpan -i File::Copy Text::Diff Getopt::Long Pod::Usage DBI DBD::SQLite LWP::UserAgent;
     ```
     
-4. Put on your search path
+4. Put it on your search path
     
     Copy the melate.pl program somewhere in your search path:
     
@@ -184,11 +184,11 @@ Options:
     
 ## Initial run
 
-the program create a hidden directory ".melate" in your HOME path.
+The program create a hidden directory ".melate" in your HOME path.
 
-into th directory create the sqlite DB called "melate.db" and a results directory for process the files from the lottery authority.
+Into the directory create the sqlite DB called "melate.db" and a results directory for processing the files from the lottery authority.
 
-when you run for the firs time you see the following:
+when you run it for the first time you see the following:
 
 ```
     Init DB
@@ -202,18 +202,18 @@ when you run for the firs time you see the following:
      
 Now, you can use the program :)
 
-you can update the results database with the -dowload option.
+You can update the results database with the -dowload option.
 
 ## Crontab to update  results
 
-If you want to auto update the lottery results, edit your crontab and put:
+If you want to auto update the lottery results, edit your crontab and add:
 
 ```
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 0 8 * * 1,3,4,6,0 /usr/local/bin/melate.pl -d
 ```
 
-Thist run at 8 o'clock on Monday, Wednesday, Thursday, Saturday, and Sunday.
+This will run at 8 o'clock on Monday, Wednesday, Thursday, Saturday, and Sunday.
 
 The "Melate", "Revancha" and "Revanchita" results are available on Thursday, Saturday and Monday.
 
