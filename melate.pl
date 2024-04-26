@@ -178,7 +178,7 @@ sub prize {
     my $draw  = '';
     my $date  = '';
     my $prize = '';
-    
+
     # makes more friendly format
     sub _Money {
         my $number = shift;
@@ -187,7 +187,7 @@ sub prize {
         $number =~ s/^(-?)/$1\$/;
         return $number;
     } # End sub _Money()
-    
+
     my $ret = $sth_results->execute($product,1);
     while (my $results_ref = $sth_results->fetchrow_hashref) {
         $draw  = $results_ref->{draw};
@@ -259,7 +259,7 @@ sub download_results {
         open(TOUCH, ">", "$work_dir/results/Retro.csv") or die;
         close(TOUCH);
     }
-        
+
     # Read each lottery information
     my $SQL_Code = "select * from products;";
     my $sth = $dbh->prepare($SQL_Code);
@@ -271,7 +271,7 @@ sub download_results {
         # download with LWP::UserAgent, is faster than wget
         my $process_flag = 0;
         $process_flag = eval { get_file($products_ref->{url},"$work_dir/results/$products_ref->{filename}.csv") };
-        if ($process_flag) {        
+        if ($process_flag) {
             # obtain only the difference of record to process
             my $diff = diff( "$work_dir/results/$products_ref->{filename}.old", "$work_dir/results/$products_ref->{filename}.csv");
             my @changes = $diff =~ /\+(\d\d,.*?)\n/g;
@@ -300,7 +300,7 @@ sub download_results {
             }
             # remove old file
             unlink("$work_dir/results/$products_ref->{filename}.old");
-            
+
         }
         else {
             move("$work_dir/results/$products_ref->{filename}.old", "$work_dir/results/$products_ref->{filename}.csv");
@@ -315,53 +315,53 @@ sub download_results {
 # of draws of a lottery product                  #
 #------------------------------------------------#
 sub lottery {
-    my ($prod, $cant) = @_;
-    my %total = ();
-    my %res = ();
-    my %prono = ();
-    $prod = 40 unless($prod);
-    $cant = 30 unless($cant);
+    my ($product, $quantity) = @_;
+    my %totals = ();
+    my %results = ();
+    $product = 40 unless($product);
+    $quantity = 30 unless($quantity);
     my $nummax = 0;
 
     # read the lottery product info
-    $SQL_Code = "select * from products where id = $prod;";
+    $SQL_Code = "select * from products where id = $product;";
     my $sth = $dbh->prepare($SQL_Code);
     my $ret = $sth->execute();
-    my ($draw, $date, $prize) = prize($prod);
+    my ($draw, $date, $prize) = prize($product);
     while (my $info_ref = $sth->fetchrow_hashref) {
         $nummax = $info_ref->{range};
         # print general lottery info;
         print BG_RED . FG_WHITE . BRIGHT unless($options{'text'});
-        print "Concurso: $info_ref->{name}    Fecha: $date    Premio: $prize    Muestras: $cant ";
+        print "Concurso: $info_ref->{name}    Fecha: $date    Premio: $prize    Muestras: $quantity ";
         print RESET unless($options{'text'});
         print "\n";
         # Search the resulst and draws of a lottery product
-        $ret = $sth_results->execute($info_ref->{id},$cant);
+        $ret = $sth_results->execute($info_ref->{id},$quantity);
         while (my $results_ref = $sth_results->fetchrow_hashref) {
-            $res{$results_ref->{draw}}{$results_ref->{r1}} = $results_ref->{r1};
-            $res{$results_ref->{draw}}{$results_ref->{r2}} = $results_ref->{r2};
-            $res{$results_ref->{draw}}{$results_ref->{r3}} = $results_ref->{r3};
-            $res{$results_ref->{draw}}{$results_ref->{r4}} = $results_ref->{r4};
-            $res{$results_ref->{draw}}{$results_ref->{r5}} = $results_ref->{r5};
-            $res{$results_ref->{draw}}{$results_ref->{r6}} = $results_ref->{r6};
-            $res{$results_ref->{draw}}{$results_ref->{r7}} = $results_ref->{r7} if ($info_ref->{additional} == 1);
+            $results{$results_ref->{draw}}{$results_ref->{r1}} = $results_ref->{r1};
+            $results{$results_ref->{draw}}{$results_ref->{r2}} = $results_ref->{r2};
+            $results{$results_ref->{draw}}{$results_ref->{r3}} = $results_ref->{r3};
+            $results{$results_ref->{draw}}{$results_ref->{r4}} = $results_ref->{r4};
+            $results{$results_ref->{draw}}{$results_ref->{r5}} = $results_ref->{r5};
+            $results{$results_ref->{draw}}{$results_ref->{r6}} = $results_ref->{r6};
+            $results{$results_ref->{draw}}{$results_ref->{r7}} = $results_ref->{r7} if ($info_ref->{additional} == 1);
         }
         $sth_results->finish();
     }
     $sth->finish();
 
     # search numbers and add totals
-    foreach my $num  (sort { $res{$b} <=> $res{$a} }keys %res) {
-        foreach my $r  (sort keys %{$res{$num}}) {
-            if (exists($prono{$r})) {
-                $prono{$r} = $prono{$r} + 1;
+    foreach my $draw  (sort { $results{$b} <=> $results{$a} }keys %results) {
+        foreach my $ball  (sort keys %{$results{$draw}}) {
+            if (exists($totals{$ball})) {
+                $totals{$ball} = $totals{$ball} + 1;
             }
             else {
-                $prono{$r} = 1;
+                $totals{$ball} = 1;
             }
         }
     }
-    # if "totals" option is in not given, print the matrix of draws and winning numbers
+
+    # if "summary" option is in not given, print the matrix of draws and winning numbers
     unless ($options{'summary'}) {
         # Print header numbers
         my $x_rep = (3 * $nummax) +5;
@@ -374,15 +374,15 @@ sub lottery {
         print "\n";
 
         # Print draws and order the numbers output
-        foreach my $sorteo (sort { $b <=> $a } keys %res) {
+        foreach my $draw (sort { $b <=> $a } keys %results) {
             print BG_CYAN unless($options{'text'});
-            print sprintf("%04d",$sorteo);
+            print sprintf("%04d",$draw);
             print RESET  unless($options{'text'});
             print ' ';
             #        foreach my $num (sort { $a <=> $b } keys %{$res{$sorteo}}) {
             for (my $i = 1;$i<=$nummax;$i++) {
-                if (exists($res{$sorteo}{$i})) {
-                    print sprintf("%02d ",$res{$sorteo}{$i});
+                if (exists($results{$draw}{$i})) {
+                    print sprintf("%02d ",$results{$draw}{$i});
                 }
                 else {
                     print '   ';
@@ -394,8 +394,8 @@ sub lottery {
         print BG_CYAN . BRIGHT. FG_BLACK  unless($options{'text'});
         print '     ';
         for (my $i = 1;$i<=$nummax;$i++) {
-             if (exists($prono{$i})) {
-                 print sprintf("%02d ",$prono{$i});
+             if (exists($totals{$i})) {
+                 print sprintf("%02d ",$totals{$i});
              }
              else {
                  print '   ';
@@ -405,29 +405,29 @@ sub lottery {
         print "\n\n";
     }
 
-    # Print the numbers order by occurency
+    # Print the numbers order by occurrences
     my $aux = 0;
     print FG_GREEN  unless($options{'text'});
-    foreach my $name (sort { $prono{$b} <=> $prono{$a} or $a <=> $b} keys %prono) {
-        if ( $aux ne $prono{$name} ) {
+    foreach my $ball (sort { $totals{$b} <=> $totals{$a} or $a <=> $b} keys %totals) {
+        if ( $aux ne $totals{$ball} ) {
             print '  ';
-            $aux = $prono{$name};
+            $aux = $totals{$ball};
         }
-        print sprintf("%02d",$name) . ' ';
+        print sprintf("%02d",$ball) . ' ';
     }
     print RESET unless($options{'text'});
     print "\n";
     print FG_YELLOW unless($options{'text'});
-    foreach my $name (sort { $prono{$b} <=> $prono{$a} or $a <=> $b} keys %prono) {
-        if ( $aux ne $prono{$name} ) {
+    $aux = 0;
+    foreach my $ball (sort { $totals{$b} <=> $totals{$a} or $a <=> $b} keys %totals) {
+        if ( $aux ne $totals{$ball} ) {
             print '  ';
-            $aux = $prono{$name};
+            $aux = $totals{$ball};
         }
-        print sprintf("%02d",$prono{$name}) . ' ';
+        print sprintf("%02d",$totals{$ball}) . ' ';
     }
     print RESET unless($options{'text'});
     print "\n\n";
-
 } # End sub Lottery
 
 #-----------#
@@ -506,7 +506,7 @@ The -lottery or -l option show the draws and result of a given lottery name:
     melate.pl -l melate
 
     The values could be "melate", "revancha", "revanchita" and "retro".
-    
+
     By default shows the lastes 30 draws, you can use the -count option to
     modify this behavior.
 
