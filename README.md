@@ -228,7 +228,50 @@ The "Melate", "Revancha" and "Revanchita" results are available on Thursday, Sat
 
 "Retro" has results available on  Wednesday and Sunday.
 
-## If you win...
+## The Database schema
+
+If you are curious and have some knowledge of SQL, you can use SQLite directly.
+
+The results are storage on a SQLite Database wiht the following data schema:
+
+```
+$ sqlite3 ~/.melate/melate.db 
+-- Loading resources from /Volumes/Pop-Data/pop/.sqliterc
+SQLite version 3.32.3 2020-06-18 14:16:19
+Enter ".help" for usage hints.
+sqlite> .schema
+CREATE TABLE products (
+            id         integer not null,
+            name       text not null,
+            range      integer not null,
+            balls      integer not null,
+            additional integer not null,
+            url        text not null,
+            filename   text not null
+        );
+CREATE TABLE results (
+            id         INTEGER PRIMARY KEY,
+            product_id INTEGER NOT NULL,
+            draw       integer NOT NULL,
+            date_time  TEXT    NOT NULL,
+            r1         integer,
+            r2         integer,
+            r3         integer,
+            r4         integer,
+            r5         integer,
+            r6         integer,
+            r7         integer,
+            award      integer,
+            FOREIGN KEY(product_id) REFERENCES products(id)
+        );
+CREATE UNIQUE INDEX un_p_id on products(id);
+CREATE UNIQUE INDEX un_pi_d_results ON results(product_id, draw);
+CREATE INDEX in_dt_results on results(date_time);
+CREATE INDEX in_draw_results on results(draw);
+sqlite> .quit 
+```
+
+## If you win... or lose...
 
 Please [sponsor this project](https://github.com/sponsors/elpop), or send a big tip to pay my high debt on credit cards :)
 
