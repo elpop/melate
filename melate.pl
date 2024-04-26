@@ -378,7 +378,8 @@ sub lottery {
         for (my $i = 1;$i<=$nummax;$i++) {
             print sprintf("%02d ",$i);
         }
-        print RESET unless($options{'text'});
+        print ' ';
+        print RESET unless($options{'text'});        
         print "\n";
 
         # Print draws and order the numbers output
@@ -399,6 +400,10 @@ sub lottery {
                     print '   ';
                 }
             }
+            print BG_WHITE unless($options{'text'});
+            print ' ';
+            print RESET  unless($options{'text'});
+            
             print "\n";
         }
         # Print the occurrence of a number
@@ -412,6 +417,7 @@ sub lottery {
                  print '   ';
              }
         }
+        print ' ';
         print RESET unless($options{'text'});
         print "\n\n";
     }
