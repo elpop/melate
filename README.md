@@ -218,7 +218,6 @@ You can update the results database with the -dowload option.
 If you want to auto update the lottery results, edit your crontab and add:
 
 ```
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 0 8 * * 1,3,4,6,0 /usr/local/bin/melate.pl -d
 ```
 
