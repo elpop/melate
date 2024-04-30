@@ -223,7 +223,7 @@ sub get_file {
                       SSL_verify_mode => 0x00,
                     },
     );
-    $| = 1;         # autoflush
+    $| = 1; # autoflush
     open(FILE, ">", $target) or $status = 0;
     if ($status) {
         my $res = $ua->request(
@@ -314,11 +314,13 @@ sub download_results {
 sub ocurrences {
     my ($total_ref,$max) = @_;
     my $aux = 0;
+    # search balls not in the draw and put 0 value    
     for (my $ball = 1;$ball <=$max;$ball++) {
         unless (exists($total_ref->{$ball})) {
             $total_ref->{$ball} = 0;
         }
     }
+    
     print FG_GREEN  unless($options{'text'});
     foreach my $ball (sort { $total_ref->{$b} <=> $total_ref->{$a} or $a <=> $b} keys %{$total_ref}) {
         if ( $aux ne $total_ref->{$ball} ) {
@@ -329,6 +331,7 @@ sub ocurrences {
     }
     print RESET unless($options{'text'});
     print "\n";
+    
     print FG_YELLOW unless($options{'text'});
     $aux = 0;
     foreach my $ball (sort { $total_ref->{$b} <=> $total_ref->{$a} or $a <=> $b} keys %{$total_ref}) {
@@ -378,7 +381,9 @@ sub lottery {
     $SQL_Code = "select * from products where id = $product;";
     my $sth = $dbh->prepare($SQL_Code);
     my $ret = $sth->execute();
+    # obtain draw info
     my ($draw, $date, $prize) = prize($product);
+    # search product info
     while (my $info_ref = $sth->fetchrow_hashref) {
         $nummax = $info_ref->{range};
         # print general lottery info;
@@ -402,22 +407,15 @@ sub lottery {
     }
     $sth->finish();
 
-    # search numbers and add totals
-    foreach my $draw  (sort { $results{$b} <=> $results{$a} }keys %results) {
+    # calculate numbers and add totals
+    foreach my $draw (sort { $b <=> $a } keys %results) {
         foreach my $ball  (sort keys %{$results{$draw}{balls}}) {
             if (exists($totals{$ball})) {
-                $totals{$ball} = $totals{$ball} + 1;
+                $totals{$ball} += 1;
             }
             else {
                 $totals{$ball} = 1;
             }
-        }
-    }
-
-    # search balls not in the draw and put 0 value
-    for (my $ball = 1;$ball <=$nummax;$ball++) {
-        unless (exists($totals{$ball})) {
-            $totals{$ball} = 0;
         }
     }
 
