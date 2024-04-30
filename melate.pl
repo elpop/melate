@@ -192,7 +192,7 @@ sub prize {
     }
     $sth_results->finish();
     return $draw, $date, $prize;
-}
+} # sub prize()
 
 #-------------------------------------------#
 # Show the amount of awards of each lottery #
@@ -236,7 +236,7 @@ sub get_file {
     }
     undef $ua;
     return $status;
-}
+} # sub get_file()
 
 #-----------------------------------------------#
 # Download the files from the lottery authority #
@@ -308,6 +308,60 @@ sub download_results {
     $sth->finish();
 } # end sub download_results()
 
+#----------------------------------#
+# Shows totals order by ocurrences #
+#----------------------------------#
+sub ocurrences {
+    my ($total_ref,$max) = @_;
+    my $aux = 0;
+    for (my $ball = 1;$ball <=$max;$ball++) {
+        unless (exists($total_ref->{$ball})) {
+            $total_ref->{$ball} = 0;
+        }
+    }
+    print FG_GREEN  unless($options{'text'});
+    foreach my $ball (sort { $total_ref->{$b} <=> $total_ref->{$a} or $a <=> $b} keys %{$total_ref}) {
+        if ( $aux ne $total_ref->{$ball} ) {
+            print '  ';
+            $aux = $total_ref->{$ball};
+        }
+        print sprintf("%02d",$ball) . ' ';
+    }
+    print RESET unless($options{'text'});
+    print "\n";
+    print FG_YELLOW unless($options{'text'});
+    $aux = 0;
+    foreach my $ball (sort { $total_ref->{$b} <=> $total_ref->{$a} or $a <=> $b} keys %{$total_ref}) {
+        if ( $aux ne $total_ref->{$ball} ) {
+            print '  ';
+            $aux = $total_ref->{$ball};
+        }
+        print sprintf("%02d",$total_ref->{$ball}) . ' ';
+    }
+    print RESET unless($options{'text'});
+    print "\n";
+} # End sub ocurrences()
+
+#---------------------------#
+# Shows totals of each ball #
+#---------------------------#
+sub totals {
+    my ($total_ref,$max) = @_;
+    print BG_WHITE . BRIGHT . FG_BLACK  unless($options{'text'});
+    print '                 ';
+    for (my $i = 1;$i<=$max;$i++) {
+         if (exists($total_ref->{$i})) {
+             print sprintf("%02d ",$$total_ref{$i});
+         }
+         else {
+             print '   ';
+         }
+    }
+    print ' ';
+    print RESET unless($options{'text'});
+    print "\n";
+} # End sub totals()
+
 #------------------------------------------------#
 # Shows and calculate totals of a given quantity #
 # of draws of a lottery product                  #
@@ -359,7 +413,7 @@ sub lottery {
             }
         }
     }
-    
+
     # search balls not in the draw and put 0 value
     for (my $ball = 1;$ball <=$nummax;$ball++) {
         unless (exists($totals{$ball})) {
@@ -377,7 +431,7 @@ sub lottery {
             print sprintf("%02d ",$i);
         }
         print ' ';
-        print RESET unless($options{'text'});        
+        print RESET unless($options{'text'});
         print "\n";
 
         # Print draws and order the numbers output
@@ -401,48 +455,17 @@ sub lottery {
             print BG_WHITE unless($options{'text'});
             print ' ';
             print RESET  unless($options{'text'});
-            
+
             print "\n";
         }
-        # Print the occurrence of a number
-        print BG_WHITE . BRIGHT . FG_BLACK  unless($options{'text'});
-        print '                 ';
-        for (my $i = 1;$i<=$nummax;$i++) {
-             if (exists($totals{$i})) {
-                 print sprintf("%02d ",$totals{$i});
-             }
-             else {
-                 print '   ';
-             }
-        }
-        print ' ';
-        print RESET unless($options{'text'});
-        print "\n\n";
+        # Print the totals of a ball occurences
+        totals(\%totals,$nummax);
+        print "\n";
     }
-     
+
     # Print the numbers order by occurrences
-    my $aux = 0;
-    print FG_GREEN  unless($options{'text'});
-    foreach my $ball (sort { $totals{$b} <=> $totals{$a} or $a <=> $b} keys %totals) {
-        if ( $aux ne $totals{$ball} ) {
-            print '  ';
-            $aux = $totals{$ball};
-        }
-        print sprintf("%02d",$ball) . ' ';
-    }
-    print RESET unless($options{'text'});
-    print "\n";
-    print FG_YELLOW unless($options{'text'});
-    $aux = 0;
-    foreach my $ball (sort { $totals{$b} <=> $totals{$a} or $a <=> $b} keys %totals) {
-        if ( $aux ne $totals{$ball} ) {
-            print '  ';
-            $aux = $totals{$ball};
-        }
-        print sprintf("%02d",$totals{$ball}) . ' ';
-    }
-    print RESET unless($options{'text'});
-    print "\n\n";
+    ocurrences(\%totals,$nummax);
+
 } # End sub Lottery
 
 #-----------#
