@@ -57,7 +57,7 @@ GetOptions(\%options,
            'download',
            'summary',
            'text',
-           'awards',
+           'prizes',
            'help|?',
 );
 
@@ -169,7 +169,7 @@ sub already_on_results {
 #----------------------------------------------#
 # Show the amount of awards of a given product #
 #----------------------------------------------#
-sub prize {
+sub get_prize {
     my $product = shift;
     my $draw  = '';
     my $date  = '';
@@ -197,14 +197,14 @@ sub prize {
 #-------------------------------------------#
 # Show the amount of awards of each lottery #
 #-------------------------------------------#
-sub awards {
+sub prizes {
     # Read each lottery name
     $SQL_Code = "select id, name from products;";
     my $sth = $dbh->prepare($SQL_Code);
     my $ret = $sth->execute();
     while (my $info_ref = $sth->fetchrow_hashref) {
         print "$info_ref->{name}\n";
-        print sprintf("    %s, %s, %s\n",prize($info_ref->{id}) );
+        print sprintf("    %s, %s, %s\n",get_prize($info_ref->{id}) );
     }
     $sth->finish();
 } # End sub awards()
@@ -349,9 +349,9 @@ sub ocurrences {
 # Shows totals of each ball #
 #---------------------------#
 sub totals {
-    my ($total_ref,$max) = @_;
+    my ($total_ref,$max,$leyend) = @_;
     print BG_WHITE . BRIGHT . FG_BLACK  unless($options{'text'});
-    print '                 ';
+    print sprintf(" %16s ",$leyend);
     for (my $i = 1;$i<=$max;$i++) {
          if (exists($total_ref->{$i})) {
              print sprintf("%02d ",$$total_ref{$i});
@@ -375,17 +375,17 @@ sub lottery {
     my %results = ();
     $product = 40 unless($product);
     $quantity = 30 unless($quantity);
-    my $nummax = 0;
+    my $range = 0;
 
     # read the lottery product info
     $SQL_Code = "select * from products where id = $product;";
     my $sth = $dbh->prepare($SQL_Code);
     my $ret = $sth->execute();
     # obtain draw info
-    my ($draw, $date, $prize) = prize($product);
+    my ($draw, $date, $prize) = get_prize($product);
     # search product info
     while (my $info_ref = $sth->fetchrow_hashref) {
-        $nummax = $info_ref->{range};
+        $range = $info_ref->{range};
         # print general lottery info;
         print BG_RED . FG_WHITE . BRIGHT unless($options{'text'});
         print "Product: $info_ref->{name}     Date: $date    Prize: $prize    Samples: $quantity ";
@@ -422,10 +422,10 @@ sub lottery {
     # if "summary" option is in not given, print the matrix of draws and winning numbers
     unless ($options{'summary'}) {
         # Print header numbers
-        my $x_rep = (3 * $nummax) +5;
+        my $x_rep = (3 * $range) +5;
         print BG_WHITE . BRIGHT . FG_BLACK unless($options{'text'});
-        print '  #     Date     ';
-        for (my $i = 1;$i<=$nummax;$i++) {
+        print '   #     Date     ';
+        for (my $i = 1;$i<=$range;$i++) {
             print sprintf("%02d ",$i);
         }
         print ' ';
@@ -435,14 +435,14 @@ sub lottery {
         # Print draws and order the numbers output
         foreach my $draw (sort { $b <=> $a } keys %results) {
             print BG_WHITE . BRIGHT .FG_BLACK unless($options{'text'});
-            print sprintf("%04d",$draw);
+            print sprintf(" %04d",$draw);
             print RESET  unless($options{'text'});
             print BG_WHITE . FG_BLACK unless($options{'text'});
             print " $results{$draw}{date} ";
             print RESET  unless($options{'text'});
             print ' ';
             #        foreach my $num (sort { $a <=> $b } keys %{$res{$sorteo}}) {
-            for (my $i = 1;$i<=$nummax;$i++) {
+            for (my $i = 1;$i<=$range;$i++) {
                 if (exists($results{$draw}{balls}{$i})) {
                     print sprintf("%02d ",$results{$draw}{balls}{$i});
                 }
@@ -457,12 +457,12 @@ sub lottery {
             print "\n";
         }
         # Print the totals of a ball occurences
-        totals(\%totals,$nummax);
+        totals(\%totals,$range,'Totals => ');
         print "\n";
     }
 
     # Print the numbers order by occurrences
-    ocurrences(\%totals,$nummax);
+    ocurrences(\%totals,$range);
 
 } # End sub Lottery
 
@@ -499,8 +499,8 @@ elsif ($options{'lottery'}) {
 elsif ($options{'download'}) {
     download_results();
 }
-elsif ($options{'awards'}) {
-    awards();
+elsif ($options{'prizes'}) {
+    prizes();
 }
 else {
     print "Error: no option found\n" unless($init_flag);
@@ -569,15 +569,15 @@ and insert them into the sqlite DB:
 
     the operation could take a while.
 
-=item B<-awards or -a>
+=item B<-prizes or -p>
 
 Search for the last award information of each lottery product
 
-    melate.pl -award
+    melate.pl -prizes
 
     or
 
-    melate.pl -a
+    melate.pl -p
 
 And show (for example):
 

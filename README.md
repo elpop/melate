@@ -23,9 +23,9 @@ Options:
 
                 melate.pl -l melate
 
-                The values can be "melate", "revancha", "revanchita" and "retro".
-    
-                By default shows the latest 30 draws, you can use the -count option to
+                The values can "melate", "revancha", "revanchita" and "retro".
+
+                By default shows the lastest 30 draws, you can use the -count option to
                 modify this behavior.
 
     -count or -c
@@ -39,7 +39,7 @@ Options:
 
     -download or -d
             Download the results of draws of lottery products from the
-            lottery authority and insert them into a sqlite DB:
+            lottery authority and insert them into the sqlite DB:
 
                 melate.pl -download
 
@@ -49,14 +49,14 @@ Options:
 
                 the operation could take a while.
 
-    -awards or -a
+    -prizes or -p
             Search for the last award information of each lottery product
 
-                melate.pl -award
+                melate.pl -prizes
 
                 or
 
-                melate.pl -a
+                melate.pl -p
 
             And show (for example):
 
@@ -83,8 +83,8 @@ Options:
             Used with the -lottery (or -l) option. Don't show terminal text
             color.
 
-            Use this to make printable output or generate files without escape
-            codes.
+            Use this to make printable output or generate files without
+            escape codes.
 
                 melate.pl -lottery melate -count 20 -text
 
