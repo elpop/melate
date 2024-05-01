@@ -62,6 +62,21 @@ use constant {
     BG_WHITE    => "\033[47m",
 };
 
+# Customize color output
+my %lottery_info_options = ('color' => BG_RED . FG_WHITE . BRIGHT,);
+
+my %header_numbers_options = ('color' => BG_WHITE . BRIGHT . FG_BLACK,);
+
+my %matrix_options = ('color' => { 'draw'   => BG_WHITE . BRIGHT .FG_BLACK,
+                                   'date'   => BG_WHITE . FG_BLACK,
+                                   'detail' => BG_BLACK . BRIGHT . FG_WHITE, }, );
+
+my %totals_options = ('leyend' => 'Totals => ',
+                      'color' => { 'leyend' => BG_WHITE . BRIGHT . FG_BLACK, 
+                                   'detail' => BG_RED   . BRIGHT . FG_WHITE, }, );
+
+my %ocurrences_options = ('color' => { 'header' => BG_BLACK . BRIGHT . FG_GREEN,
+                                       'detail' => BG_BLACK . BRIGHT . FG_YELLOW, }, );
 # Command Line options
 my %options = ();
 GetOptions(\%options,
@@ -321,11 +336,27 @@ sub download_results {
     $sth->finish();
 } # end sub download_results()
 
+#---------------------#
+# Shows balls numbers #
+#---------------------#
+sub header_numbers {
+    my ($range, $options_ref) = @_;
+        my $x_rep = (3 * $range) +5;
+        print $options_ref->{color} unless($options{'text'});
+        print '   #     Date     ';
+        for (my $i = 1;$i<=$range;$i++) {
+            print sprintf("%02d ",$i);
+        }
+        print ' ';
+        print RESET unless($options{'text'});
+        print "\n";
+}
+
 #----------------------------------#
 # Shows totals order by ocurrences #
 #----------------------------------#
 sub ocurrences {
-    my ($total_ref,$max) = @_;
+    my ($total_ref, $max, $options_ref) = @_;
     my $aux = 0;
     # search balls not in the draw and put 0 value    
     for (my $ball = 1;$ball <=$max;$ball++) {
@@ -334,7 +365,7 @@ sub ocurrences {
         }
     }
     
-    print FG_GREEN  unless($options{'text'});
+    print $options_ref->{color}{header} unless($options{'text'});
     foreach my $ball (sort { $total_ref->{$b} <=> $total_ref->{$a} or $a <=> $b} keys %{$total_ref}) {
         if ( $aux ne $total_ref->{$ball} ) {
             print '  ';
@@ -345,7 +376,7 @@ sub ocurrences {
     print RESET unless($options{'text'});
     print "\n";
     
-    print FG_YELLOW unless($options{'text'});
+    print $options_ref->{color}{detail} unless($options{'text'});
     $aux = 0;
     foreach my $ball (sort { $total_ref->{$b} <=> $total_ref->{$a} or $a <=> $b} keys %{$total_ref}) {
         if ( $aux ne $total_ref->{$ball} ) {
@@ -358,13 +389,14 @@ sub ocurrences {
     print "\n";
 } # End sub ocurrences()
 
-#---------------------------#
-# Shows totals of each ball #
+#---------------------------## Shows totals of each ball #
 #---------------------------#
 sub totals {
-    my ($total_ref,$max,$leyend) = @_;
-    print BG_WHITE . BRIGHT . FG_BLACK  unless($options{'text'});
-    print sprintf(" %16s ",$leyend);
+    my ($total_ref,$max,$options_ref) = @_;
+    print $options_ref->{color}{leyend} unless($options{'text'});
+    print sprintf("%16s ",$options_ref->{leyend});
+    print $options_ref->{color}{detail} unless($options{'text'});
+    print ' ';
     for (my $i = 1;$i<=$max;$i++) {
          if (exists($total_ref->{$i})) {
              print sprintf("%02d ",$$total_ref{$i});
@@ -373,10 +405,22 @@ sub totals {
              print '   ';
          }
     }
+    print $options_ref->{color}{leyend} unless($options{'text'});
     print ' ';
     print RESET unless($options{'text'});
     print "\n";
 } # End sub totals()
+
+#--------------------#
+# Shows product info #
+#--------------------#
+sub lottery_info {
+    my ($name, $date, $prize, $samples, $options_ref) = @_;
+    print $options_ref->{color} unless($options{'text'});
+    print "Product: $name     Date: $date    Prize: $prize    Samples: $samples ";
+    print RESET unless($options{'text'});
+    print "\n";    
+}
 
 #------------------------------------------------#
 # Shows and calculate totals of a given quantity #
@@ -400,10 +444,7 @@ sub lottery {
     while (my $info_ref = $sth->fetchrow_hashref) {
         $range = $info_ref->{range};
         # print general lottery info;
-        print BG_RED . FG_WHITE . BRIGHT unless($options{'text'});
-        print "Product: $info_ref->{name}     Date: $date    Prize: $prize    Samples: $quantity ";
-        print RESET unless($options{'text'});
-        print "\n";
+        lottery_info($info_ref->{name}, $date, $prize, $quantity, \%lottery_info_options);
         # Search the resulst and draws of a lottery product
         $ret = $sth_results->execute($info_ref->{id},$quantity);
         while (my $results_ref = $sth_results->fetchrow_hashref) {
@@ -435,26 +476,16 @@ sub lottery {
     # if "summary" option is in not given, print the matrix of draws and winning numbers
     unless ($options{'summary'}) {
         # Print header numbers
-        my $x_rep = (3 * $range) +5;
-        print BG_WHITE . BRIGHT . FG_BLACK unless($options{'text'});
-        print '   #     Date     ';
-        for (my $i = 1;$i<=$range;$i++) {
-            print sprintf("%02d ",$i);
-        }
-        print ' ';
-        print RESET unless($options{'text'});
-        print "\n";
-
+        header_numbers($range,\%header_numbers_options);
         # Print draws and order the numbers output
         foreach my $draw (sort { $b <=> $a } keys %results) {
-            print BG_WHITE . BRIGHT .FG_BLACK unless($options{'text'});
+            print $matrix_options{color}{draw}  unless($options{'text'});
             print sprintf(" %04d",$draw);
             print RESET  unless($options{'text'});
-            print BG_WHITE . FG_BLACK unless($options{'text'});
+            print $matrix_options{color}{date} unless($options{'text'});
             print " $results{$draw}{date} ";
-            print RESET  unless($options{'text'});
+            print $matrix_options{color}{detail} unless($options{'text'});
             print ' ';
-            #        foreach my $num (sort { $a <=> $b } keys %{$res{$sorteo}}) {
             for (my $i = 1;$i<=$range;$i++) {
                 if (exists($results{$draw}{balls}{$i})) {
                     print sprintf("%02d ",$results{$draw}{balls}{$i});
@@ -463,19 +494,17 @@ sub lottery {
                     print '   ';
                 }
             }
-            print BG_WHITE unless($options{'text'});
+            print $matrix_options{color}{draw} unless($options{'text'});
             print ' ';
             print RESET  unless($options{'text'});
-
             print "\n";
         }
         # Print the totals of a ball occurences
-        totals(\%totals,$range,'Totals => ');
+        totals(\%totals,$range, \%totals_options);
         print "\n";
     }
-
     # Print the numbers order by occurrences
-    ocurrences(\%totals,$range);
+    ocurrences(\%totals,$range, \%ocurrences_options);
 
 } # End sub Lottery
 
