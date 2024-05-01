@@ -17,7 +17,7 @@
 # the Free Software Foundation, either version 3 of the License, or    #
 # (at your option) any later version.                                  #
 #                                                                      #
-# This program is distributed in the hope that it will be useful, but  #  
+# This program is distributed in the hope that it will be useful, but  #
 # WITHOUT ANY WARRANTY; without even the implied warranty of           #
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU    #
 # General Public License for more details.                             #
@@ -72,7 +72,7 @@ my %matrix_options = ('color' => { 'draw'   => BG_WHITE . BRIGHT .FG_BLACK,
                                    'detail' => BG_BLACK . BRIGHT . FG_WHITE, }, );
 
 my %totals_options = ('leyend' => 'Totals => ',
-                      'color' => { 'leyend' => BG_WHITE . BRIGHT . FG_BLACK, 
+                      'color' => { 'leyend' => BG_WHITE . BRIGHT . FG_BLACK,
                                    'detail' => BG_RED   . BRIGHT . FG_WHITE, }, );
 
 my %ocurrences_options = ('color' => { 'header' => BG_BLACK . BRIGHT . FG_GREEN,
@@ -358,13 +358,13 @@ sub header_numbers {
 sub ocurrences {
     my ($total_ref, $max, $options_ref) = @_;
     my $aux = 0;
-    # search balls not in the draw and put 0 value    
+    # search balls not in the draw and put 0 value
     for (my $ball = 1;$ball <=$max;$ball++) {
         unless (exists($total_ref->{$ball})) {
             $total_ref->{$ball} = 0;
         }
     }
-    
+
     print $options_ref->{color}{header} unless($options{'text'});
     foreach my $ball (sort { $total_ref->{$b} <=> $total_ref->{$a} or $a <=> $b} keys %{$total_ref}) {
         if ( $aux ne $total_ref->{$ball} ) {
@@ -375,7 +375,7 @@ sub ocurrences {
     }
     print RESET unless($options{'text'});
     print "\n";
-    
+
     print $options_ref->{color}{detail} unless($options{'text'});
     $aux = 0;
     foreach my $ball (sort { $total_ref->{$b} <=> $total_ref->{$a} or $a <=> $b} keys %{$total_ref}) {
@@ -389,7 +389,8 @@ sub ocurrences {
     print "\n";
 } # End sub ocurrences()
 
-#---------------------------## Shows totals of each ball #
+#---------------------------#
+# Shows totals of each ball #
 #---------------------------#
 sub totals {
     my ($total_ref,$max,$options_ref) = @_;
@@ -419,7 +420,7 @@ sub lottery_info {
     print $options_ref->{color} unless($options{'text'});
     print "Product: $name     Date: $date    Prize: $prize    Samples: $samples ";
     print RESET unless($options{'text'});
-    print "\n";    
+    print "\n";
 }
 
 #------------------------------------------------#
