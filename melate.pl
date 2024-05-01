@@ -75,8 +75,8 @@ my %totals_options = ('leyend' => 'Totals => ',
                       'color' => { 'leyend' => BG_WHITE . BRIGHT . FG_BLACK,
                                    'detail' => BG_RED   . BRIGHT . FG_WHITE, }, );
 
-my %ocurrences_options = ('color' => { 'header' => BG_BLACK . BRIGHT . FG_GREEN,
-                                       'detail' => BG_BLACK . BRIGHT . FG_YELLOW, }, );
+my %ocurrences_options = ('color' => { 'header' => BG_RED . BRIGHT . FG_BLACK,
+                                       'detail' => BG_RED . BRIGHT . FG_WHITE, }, );
 # Command Line options
 my %options = ();
 GetOptions(\%options,
