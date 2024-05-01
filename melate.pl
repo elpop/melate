@@ -63,7 +63,7 @@ use constant {
 };
 
 # Customize color output
-my %lottery_info_options = ('color' => BG_RED . FG_WHITE . BRIGHT,);
+my %lottery_info_options = ('color' => BG_YELLOW . BRIGHT .FG_BLACK,);
 
 my %header_numbers_options = ('color' => BG_WHITE . BRIGHT . FG_BLACK,);
 
@@ -71,12 +71,20 @@ my %matrix_options = ('color' => { 'draw'   => BG_WHITE . BRIGHT .FG_BLACK,
                                    'date'   => BG_WHITE . FG_BLACK,
                                    'detail' => BG_BLACK . BRIGHT . FG_WHITE, }, );
 
-my %totals_options = ('leyend' => 'Totals => ',
+my %totals_options = ('leyend' => 'Totals ',
                       'color' => { 'leyend' => BG_WHITE . BRIGHT . FG_BLACK,
                                    'detail' => BG_RED   . BRIGHT . FG_WHITE, }, );
 
 my %ocurrences_options = ('color' => { 'header' => BG_RED . BRIGHT . FG_BLACK,
                                        'detail' => BG_RED . BRIGHT . FG_WHITE, }, );
+
+my %break_ocurrences_options = ('color' => { 'header' => BG_CYAN . BRIGHT . FG_BLACK,
+                                             'detail' => BG_CYAN . BRIGHT . FG_WHITE, }, );
+
+my %break_options = ('leyend' => 'Subtotal ',
+                      'color' => { 'leyend' => BG_WHITE . BRIGHT . FG_BLACK,
+                                   'detail' => BG_CYAN . BRIGHT . FG_BLACK,, }, );
+
 # Command Line options
 my %options = ();
 GetOptions(\%options,
@@ -84,6 +92,7 @@ GetOptions(\%options,
            'count=i',
            'download',
            'summary',
+           'break=i',
            'text',
            'prizes',
            'help|?',
@@ -98,6 +107,7 @@ unless (-e "$work_dir") {
     $init_flag = 1;
 }
 
+# Open or create SQLite DB
 my $dbh = DBI->connect("dbi:SQLite:dbname=$work_dir/melate.db","","");
 $dbh->{PrintError} = 0; # Disable automatic  Error Handling
 
@@ -107,7 +117,7 @@ if ($init_flag) {
     init_db();
 }
 
-# prepare in advanced the read results query
+# prepare in advanced the work query
 my $SQL_Code = "select * from results where product_id = ? order by draw desc limit ?;";
 my $sth_results = $dbh->prepare($SQL_Code);
 
@@ -350,7 +360,7 @@ sub header_numbers {
         print ' ';
         print RESET unless($options{'text'});
         print "\n";
-}
+} # end sub header_numbers()
 
 #----------------------------------#
 # Shows totals order by ocurrences #
@@ -420,8 +430,8 @@ sub lottery_info {
     print $options_ref->{color} unless($options{'text'});
     print "Product: $name     Date: $date    Prize: $prize    Samples: $samples ";
     print RESET unless($options{'text'});
-    print "\n";
-}
+    print "\n\n";
+} # end sub lottery_info()
 
 #------------------------------------------------#
 # Shows and calculate totals of a given quantity #
@@ -433,6 +443,7 @@ sub lottery {
     my %results = ();
     $product = 40 unless($product);
     $quantity = 30 unless($quantity);
+    my $break = 0;
     my $range = 0;
 
     # read the lottery product info
@@ -462,14 +473,33 @@ sub lottery {
     }
     $sth->finish();
 
+    # break analysis variables
+    my $break_line = 0;
+    my @break_array = ();
+    my %break =();
+
     # calculate numbers and add totals
     foreach my $draw (sort { $b <=> $a } keys %results) {
+        $break_line++;
         foreach my $ball  (sort keys %{$results{$draw}{balls}}) {
             if (exists($totals{$ball})) {
                 $totals{$ball} += 1;
+                $break{$ball}  += 1;
             }
             else {
                 $totals{$ball} = 1;
+                $break{$ball}  = 1;
+            }
+        }
+        if (exists($options{'break'})) {
+            $break = $options{'break'};
+            if ( ($break_line % $break) == 0) {
+                push (@break_array, {%break});
+                %break =();
+            }
+            elsif ( $break_line >= scalar(keys %results)){
+                push (@break_array, {%break});
+                %break =();
             }
         }
     }
@@ -479,7 +509,10 @@ sub lottery {
         # Print header numbers
         header_numbers($range,\%header_numbers_options);
         # Print draws and order the numbers output
+        $break_line = 0;
+        my $break_count = 0;
         foreach my $draw (sort { $b <=> $a } keys %results) {
+            $break_line++;
             print $matrix_options{color}{draw}  unless($options{'text'});
             print sprintf(" %04d",$draw);
             print RESET  unless($options{'text'});
@@ -499,10 +532,29 @@ sub lottery {
             print ' ';
             print RESET  unless($options{'text'});
             print "\n";
+
+            if (exists($options{'break'})) {
+                $break = $options{break};
+                if ( ($break_line % $break) == 0) {
+                    totals($break_array[$break_count],$range,\%break_options);
+                    $break_count++;
+                }
+                elsif ( $break_line >= scalar(keys %results)){
+                    totals($break_array[$break_count], $range, \%break_options );
+                }
+            }
+
         }
         # Print the totals of a ball occurences
         totals(\%totals,$range, \%totals_options);
         print "\n";
+    }
+
+    if (exists($options{'break'})) {
+        for(my $i=0;$#break_array>=$i;$i++){
+            ocurrences($break_array[$i],$range, \%break_ocurrences_options);
+            print "\n";
+        }
     }
     # Print the numbers order by occurrences
     ocurrences(\%totals,$range, \%ocurrences_options);
@@ -564,7 +616,7 @@ melate.pl
 
 =head1 DESCRIPTION
 
-This program report the results of Mexican lotto draws "Melate", "Revancha", "Revanchita" and "Retro".
+This program report the results of Mexican melate draws "Melate", "Revancha", "Revanchita" and "Retro".
 
 =head1 SYNOPSIS
 
@@ -598,6 +650,16 @@ Show the last N number of draws of a given lottery name:
     or
 
     melate.pl -l melate -c 20
+
+=item B<-break or -b>
+
+break on N number of draws of a given lottery name for further analysis:
+
+    melate.pl -lottery melate -count 20 -break 10
+
+    or
+
+    melate.pl -l melate -c 20 -b 10
 
 =item B<-download or -d>
 
