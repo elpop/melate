@@ -37,6 +37,16 @@ Options:
 
                 melate.pl -l melate -c 20
 
+    -break or -b
+            break on N number of draws of a given lottery name for further
+            analysis:
+
+                melate.pl -lottery melate -count 20 -break 10
+
+                or
+
+                melate.pl -l melate -c 20 -b 10
+
     -download or -d
             Download the results of draws of lottery products from the
             lottery authority and insert them into the sqlite DB:
