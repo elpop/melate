@@ -91,6 +91,8 @@ GetOptions(\%options,
            'lottery=s',
            'count=i',
            'download',
+           'add=s%{5}',
+           'remove=s%{2}',
            'summary',
            'break=i',
            'text',
@@ -346,6 +348,107 @@ sub download_results {
     $sth->finish();
 } # end sub download_results()
 
+sub search_product {
+    my $name = shift;
+    my $product = 0;
+    if ($name eq 'melate') {
+        $product = 40;
+    }
+    elsif ($name eq 'revancha') {
+        $product = 41;
+    }
+    elsif ($name eq 'revanchita') {
+        $product = 34;
+    }
+    elsif ($name eq 'retro') {
+        $product = 30;
+    }
+    return $product;
+}
+
+#-----------------------------------------------#
+# Add manually a single account to the Key Ring #
+#-----------------------------------------------#
+sub add {
+    # if have values, proceed
+    if ( $options{'add'}{'product'}
+      && $options{'add'}{'draw'}
+      && $options{'add'}{'date'}
+      && $options{'add'}{'balls'}
+      && $options{'add'}{'award'}) {
+        my $product = search_product($options{'add'}{'product'});
+        if ($product) {
+            if ($options{'add'}{'draw'} =~ /\d{1,4}/ ) {
+                unless ( already_on_results($product, $options{'add'}{'draw'}) ) {
+                    if ($options{'add'}{'date'} =~ /^((19|20)\d\d)-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])$/) {
+                        if ($options{'add'}{'award'} =~ /^\d+/) {
+                            if ($options{'add'}{'balls'} =~ /^\d+,\d+,\d+,\d+,\d+,\d+/) {
+                                my ($r1,$r2,$r3,$r4,$r5,$r6,$r7) = split(/,/, $options{'add'}{'balls'});
+                                $sth_insert->execute($product,$options{'add'}{'draw'},$options{'add'}{'date'}, $r1,$r2,$r3,$r4,$r5,$r6,$r7,$options{'add'}{'award'});
+                                print "result added\n";
+                            }
+                            else {
+                                print "Error: Invalid balls and value\n";
+                            }
+                        }
+                        else {
+                            print "Error: award has no value\n";
+                        }
+                    }
+                    else {
+                        print "Error: Invalid Date, must be in YYYY-MM-DD format\n";
+                    }
+                }
+                else {
+                    print "Error: record already exists\n";
+                }
+            }
+            else {
+                print "Error: invalid draw number\n";
+            }
+        }
+        else {
+            print "Error: invalid product name\n";
+        }
+    }
+    else {
+        print "Usage:\n";
+        print '    melate.pl -add product=melate draw=3888 date=\'2024-05-01\' balls=\'1,2,3,4,5,6,7\' award=132000000 ' . "\n";
+    }
+} # End add_key()
+
+#---------------------------------------------#
+# Remove a single record from 'results' table #
+#---------------------------------------------#
+sub remove {
+    # if has a value proceed
+    if ( $options{'remove'}{'product'}
+      && $options{'remove'}{'draw'} ) {
+        my $product = search_product($options{'remove'}{'product'});
+        if ($product) {
+            if ($options{'remove'}{'draw'} =~ /\d{1,4}/ ) {
+                if ( already_on_results($product, $options{'remove'}{'draw'}) ) {
+                    $dbh->do("delete from results where product_id = $product and draw = $options{'remove'}{'draw'};");
+                    print "result remove\n";
+                }
+                else {
+                    print "Error: no record found to remove\n";
+                }
+            }
+            else {
+                print "Error: invalid draw number\n";
+            }
+        }
+        else {
+            print "Error: invalid product name\n";
+        }
+    }
+    else {
+        print "Usage:\n";
+        print '    ./melate.pl -remove product=melate draw=3888' . "\n";
+    }
+} # End remove()
+
 #---------------------#
 # Shows balls numbers #
 #---------------------#
@@ -571,19 +674,7 @@ if ($options{'help'}) {
     pod2usage(2);
 }
 elsif ($options{'lottery'}) {
-    my $product = 0;
-    if ($options{'lottery'} eq 'melate') {
-        $product = 40;
-    }
-    elsif ($options{'lottery'} eq 'revancha') {
-        $product = 41;
-    }
-    elsif ($options{'lottery'} eq 'revanchita') {
-        $product = 34;
-    }
-    elsif ($options{'lottery'} eq 'retro') {
-        $product = 30;
-    }
+    my $product = search_product($options{'lottery'});
     if ($product) {
         lottery($product,$options{'count'});
     }
@@ -596,6 +687,12 @@ elsif ($options{'download'}) {
 }
 elsif ($options{'prizes'}) {
     prizes();
+}
+elsif ($options{'add'}) {
+    add();
+}
+elsif ($options{'remove'}) {
+    remove();
 }
 else {
     print "Error: no option found\n" unless($init_flag);
@@ -673,6 +770,26 @@ and insert them into the sqlite DB:
     melate.pl -d
 
     the operation could take a while.
+
+=item B<-add or -a>
+
+Add manually a result record on the database:
+
+    melate.pl -add product=melate draw=3888 date='2024-05-01' balls='1,2,3,4,5,6,7' award=132000000
+
+The values of "product" can be "melate", "revancha", "revanchita" or "retro".
+
+The "date" is 'YYYY-MM-DD' format.
+
+The "balls" is a string with the results values of the draw.
+
+=item B<-remove or -r>
+
+remove manually a result record on the database:
+
+    melate.pl -remove product=melate draw=3888
+
+The "product" name and "draw" number must be match with a record on the database to be remove.
 
 =item B<-prizes or -p>
 
