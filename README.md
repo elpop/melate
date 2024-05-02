@@ -62,7 +62,8 @@ Options:
     -add or -a
             Add manually a result record on the database:
 
-                melate.pl -add product=melate draw=3888 date='2024-05-01' balls='1,2,3,4,5,6,7' award=132000000
+                melate.pl -add product=melate draw=3888 date='2024-05-01' \
+                               balls='1,2,3,4,5,6,7' award=132000000
 
             The values of "product" can be "melate", "revancha",
             "revanchita" or "retro".

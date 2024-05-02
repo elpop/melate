@@ -348,6 +348,9 @@ sub download_results {
     $sth->finish();
 } # end sub download_results()
 
+#----------------------------------#
+# find product_id base on his name #
+#----------------------------------#
 sub search_product {
     my $name = shift;
     my $product = 0;
@@ -775,7 +778,8 @@ and insert them into the sqlite DB:
 
 Add manually a result record on the database:
 
-    melate.pl -add product=melate draw=3888 date='2024-05-01' balls='1,2,3,4,5,6,7' award=132000000
+    melate.pl -add product=melate draw=3888 date='2024-05-01' \
+                   balls='1,2,3,4,5,6,7' award=132000000
 
 The values of "product" can be "melate", "revancha", "revanchita" or "retro".
 
