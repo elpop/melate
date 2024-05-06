@@ -369,9 +369,9 @@ sub search_product {
     return $product;
 }
 
-#-----------------------------------------------#
-# Add manually a single account to the Key Ring #
-#-----------------------------------------------#
+#---------------------------------------------#
+# Insert a draw result in the 'results' table #
+#---------------------------------------------#
 sub add {
     # if have values, proceed
     if ( $options{'add'}{'product'}
