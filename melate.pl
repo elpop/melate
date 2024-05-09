@@ -75,9 +75,10 @@ my %totals_options = ('leyend' => 'Totals ',
                       'color' => { 'leyend' => BG_WHITE . BRIGHT . FG_BLACK,
                                    'detail' => BG_RED   . BRIGHT . FG_WHITE, }, );
 
-my %graph_options = ('color' => { 'axis'  => BG_RED   . BRIGHT . FG_WHITE,
-                                  'bar'   => BG_WHITE . BRIGHT . FG_BLACK,
-                                  'balls' => BG_RED   . BRIGHT . FG_WHITE, }, );
+my %graph_options = ('color' => { 'axis'   => BG_WHITE . BRIGHT . FG_BLACK,
+                                  'bar'    => BG_CYAN  . BRIGHT . FG_BLACK,
+                                  'balls'  => BG_WHITE . BRIGHT . FG_BLACK,
+                                  'totals' => BG_RED   . BRIGHT . FG_WHITE,}, );
 
 my %ocurrences_options = ('color' => { 'header' => BG_RED . BRIGHT . FG_BLACK,
                                        'detail' => BG_RED . BRIGHT . FG_WHITE, }, );
@@ -508,7 +509,7 @@ sub ocurrences {
             print '  ';
             $aux = $total_ref->{$ball};
         }
-        print sprintf("%02d",$total_ref->{$ball}) . ' ';
+        print sprintf("%2s",$total_ref->{$ball}) . ' ';
     }
     print RESET unless($options{'text'});
     print "\n";
@@ -525,7 +526,7 @@ sub totals {
     print ' ';
     for (my $i = 1;$i<=$max;$i++) {
          if (exists($total_ref->{$i})) {
-             print sprintf("%02d ",$$total_ref{$i});
+             print sprintf("%2s ",$$total_ref{$i});
          }
          else {
              print '   ';
@@ -561,7 +562,7 @@ sub text_graph {
     # graph on text the results
     for (my $axis = $max_value + 1; $axis >= 1; $axis--) {
         print $options_ref->{color}{axis} unless($options{'text'});
-        print sprintf(" %02d ", $axis);
+        print sprintf(" %2s ", $axis);
         print RESET unless($options{'text'});
         for (my $ball = 1;$ball <=$max;$ball++) {
             if (exists($total_ref->{$ball})) {
@@ -590,12 +591,14 @@ sub text_graph {
         print RESET unless($options{'text'});
         print "\n";
     }
-    # print the balls numbers
-    print $options_ref->{color}{balls} unless($options{'text'});
+    # print the balls totals
+    print $options_ref->{color}{axis} unless($options{'text'});
     print '    ';
+    print $options_ref->{color}{totals} unless($options{'text'});
     for (my $i = 1;$i<=$max;$i++) {
-        print sprintf("%02d ",$i);
+        print sprintf("%2s ", $total_ref->{$i});
     }
+    print $options_ref->{color}{axis} unless($options{'text'});
     print ' ';
     print RESET unless($options{'text'});
     print "\n";
