@@ -550,12 +550,12 @@ sub text_graph {
     print ' ';
     print RESET unless($options{'text'});
     print "\n";
-    
-    # obtain the max value on totlas_ref to define Axis
+
+    # obtain the max value on totass_ref to define the axis
     $_ > $max_value and $max_value = $_ for values %{$total_ref};
 
     # graph on text the results
-    for (my $axis = $max_value + 1; $axis >= 0; $axis--) {
+    for (my $axis = $max_value + 1; $axis >= 1; $axis--) {
         print $options_ref->{color}{axis} unless($options{'text'});
         print sprintf(" %02d ", $axis);
         print RESET unless($options{'text'});
@@ -570,7 +570,7 @@ sub text_graph {
                         print $options_ref->{color}{bar};
                         print ' ';
                         print RESET;
-                        print ' ';                   
+                        print ' ';
                     }
                 }
                 else {
@@ -728,16 +728,16 @@ sub lottery {
         if (exists($options{'graph'})) {
             text_graph(\%totals,$range, \%graph_options);
             print "\n";
-        }        
+        }
     }
-    
+
     if (exists($options{'break'})) {
         for(my $i=0;$#break_array>=$i;$i++){
             ocurrences($break_array[$i],$range, \%break_ocurrences_options);
             print "\n";
         }
     }
-    
+
     # Print the numbers order by occurrences
     ocurrences(\%totals,$range, \%ocurrences_options);
 
@@ -836,7 +836,7 @@ break on N number of draws of a given lottery name for further analysis:
     or
 
     melate.pl -l melate -c 20 -b 10
-    
+
 =item B<-graph or -g>
 
 Create a bar chart on text of the ocurrences of each ball:
