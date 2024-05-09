@@ -82,6 +82,9 @@ my %graph_options = ('color' => { 'axis'  => BG_RED   . BRIGHT . FG_WHITE,
 my %ocurrences_options = ('color' => { 'header' => BG_RED . BRIGHT . FG_BLACK,
                                        'detail' => BG_RED . BRIGHT . FG_WHITE, }, );
 
+my %weight_ocurrences_options = ('color' => { 'header' => BG_GREEN . BRIGHT . FG_BLACK,
+                                              'detail' => BG_GREEN . BRIGHT . FG_WHITE, }, );
+
 my %break_ocurrences_options = ('color' => { 'header' => BG_CYAN . BRIGHT . FG_BLACK,
                                              'detail' => BG_CYAN . BRIGHT . FG_WHITE, }, );
 
@@ -102,6 +105,7 @@ GetOptions(\%options,
            'break=i',
            'text',
            'prizes',
+           'weight',
            'help|?',
 );
 
@@ -551,7 +555,7 @@ sub text_graph {
     print RESET unless($options{'text'});
     print "\n";
 
-    # obtain the max value on totass_ref to define the axis
+    # obtain the max value on totals_ref to define the axis
     $_ > $max_value and $max_value = $_ for values %{$total_ref};
 
     # graph on text the results
@@ -740,7 +744,23 @@ sub lottery {
 
     # Print the numbers order by occurrences
     ocurrences(\%totals,$range, \%ocurrences_options);
+    print "\n";
 
+    # take a weight factor on each ball multiply the level of ocurrences
+    if (exists($options{'weight'}) && exists($options{'break'})) {
+        my %weight = ();
+        my $level = $#break_array + 1;
+        for(my $i=0;$#break_array>=$i;$i++){
+            foreach my $ball (sort keys %{$break_array[$i]}) {
+                if (exists($break_array[$i]->{$ball})) {
+                    $weight{$ball} += ($break_array[$i]->{$ball} * $level);
+                }
+            }
+            $level--;
+        }
+        ocurrences(\%weight,$range,\%weight_ocurrences_options);
+        print "\n";
+    }
 } # End sub Lottery
 
 #-----------#
@@ -836,6 +856,24 @@ break on N number of draws of a given lottery name for further analysis:
     or
 
     melate.pl -l melate -c 20 -b 10
+
+=item B<-weight or -w>
+
+Work with the -break option.
+
+try to analyze each break segment, asign a weight value
+for each segment (This is a experimental feature).
+
+The most recent segments has more value than the old ones.
+
+The sum of this values create a total weight factor to show
+the posible numbers in a future draw
+
+    melate.pl -lottery retro -count 60 -break 10 -weight
+
+    or
+
+    melate.pl -l retro -c 60 -b 10 -w
 
 =item B<-graph or -g>
 
