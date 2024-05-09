@@ -47,6 +47,23 @@ Options:
 
                 melate.pl -l melate -c 20 -b 10
 
+    -weight or -w
+            Work with the -break option.
+
+            try to analyze each break segment, asign a weight value for each
+            segment (This is a experimental feature).
+
+            The most recent segments has more value than the old ones.
+
+            The sum of this values create a total weight factor to show the
+            posible numbers in a future draw
+
+                melate.pl -lottery retro -count 60 -break 10 -weight
+
+                or
+
+                melate.pl -l retro -c 60 -b 10 -w
+
     -graph or -g
             Create a bar chart on text of the ocurrences of each ball:
 
