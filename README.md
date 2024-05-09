@@ -47,6 +47,15 @@ Options:
 
                 melate.pl -l melate -c 20 -b 10
 
+    -graph or -g
+            Create a bar chart on text of the ocurrences of each ball:
+
+                melate.pl -lottery melate -count 20 -g
+
+                or
+
+                melate.pl -l melate -c 20 -g
+
     -download or -d
             Download the results of draws of lottery products from the
             lottery authority and insert them into the sqlite DB:

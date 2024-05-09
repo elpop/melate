@@ -75,6 +75,10 @@ my %totals_options = ('leyend' => 'Totals ',
                       'color' => { 'leyend' => BG_WHITE . BRIGHT . FG_BLACK,
                                    'detail' => BG_RED   . BRIGHT . FG_WHITE, }, );
 
+my %graph_options = ('color' => { 'axis'  => BG_RED   . BRIGHT . FG_WHITE,
+                                  'bar'   => BG_WHITE . BRIGHT . FG_BLACK,
+                                  'balls' => BG_RED   . BRIGHT . FG_WHITE, }, );
+
 my %ocurrences_options = ('color' => { 'header' => BG_RED . BRIGHT . FG_BLACK,
                                        'detail' => BG_RED . BRIGHT . FG_WHITE, }, );
 
@@ -94,6 +98,7 @@ GetOptions(\%options,
            'add=s%{5}',
            'remove=s%{2}',
            'summary',
+           'graph',
            'break=i',
            'text',
            'prizes',
@@ -528,6 +533,70 @@ sub totals {
     print "\n";
 } # End sub totals()
 
+#----------------------------#
+# Shows totals graph on text #
+#----------------------------#
+sub text_graph {
+    my ($total_ref, $max, $options_ref) = @_;
+    my $max_value = 0;
+
+    # print the balls numbers
+    print $options_ref->{color}{balls} unless($options{'text'});
+    print '    ';
+    for (my $i = 1;$i<=$max;$i++) {
+        #print '   ';
+        print sprintf("%02d ",$i);
+    }
+    print ' ';
+    print RESET unless($options{'text'});
+    print "\n";
+    
+    # obtain the max value on totlas_ref to define Axis
+    $_ > $max_value and $max_value = $_ for values %{$total_ref};
+
+    # graph on text the results
+    for (my $axis = $max_value + 1; $axis >= 0; $axis--) {
+        print $options_ref->{color}{axis} unless($options{'text'});
+        print sprintf(" %02d ", $axis);
+        print RESET unless($options{'text'});
+        for (my $ball = 1;$ball <=$max;$ball++) {
+            if (exists($total_ref->{$ball})) {
+                if ($axis <= $total_ref->{$ball}) {
+                    if ($options{'text'}) {
+                        print ' X ';
+                    }
+                    else {
+                        print ' ';
+                        print $options_ref->{color}{bar};
+                        print ' ';
+                        print RESET;
+                        print ' ';                   
+                    }
+                }
+                else {
+                    print '   ';
+                }
+            }
+            else {
+                print '   ';
+            }
+        }
+        print $options_ref->{color}{axis} unless($options{'text'});
+        print ' ';
+        print RESET unless($options{'text'});
+        print "\n";
+    }
+    # print the balls numbers
+    print $options_ref->{color}{balls} unless($options{'text'});
+    print '    ';
+    for (my $i = 1;$i<=$max;$i++) {
+        print sprintf("%02d ",$i);
+    }
+    print ' ';
+    print RESET unless($options{'text'});
+    print "\n";
+} # End sub text_graph()
+
 #--------------------#
 # Shows product info #
 #--------------------#
@@ -654,14 +723,21 @@ sub lottery {
         # Print the totals of a ball occurences
         totals(\%totals,$range, \%totals_options);
         print "\n";
-    }
 
+        # graph on text the balls ocurrences
+        if (exists($options{'graph'})) {
+            text_graph(\%totals,$range, \%graph_options);
+            print "\n";
+        }        
+    }
+    
     if (exists($options{'break'})) {
         for(my $i=0;$#break_array>=$i;$i++){
             ocurrences($break_array[$i],$range, \%break_ocurrences_options);
             print "\n";
         }
     }
+    
     # Print the numbers order by occurrences
     ocurrences(\%totals,$range, \%ocurrences_options);
 
@@ -760,6 +836,16 @@ break on N number of draws of a given lottery name for further analysis:
     or
 
     melate.pl -l melate -c 20 -b 10
+    
+=item B<-graph or -g>
+
+Create a bar chart on text of the ocurrences of each ball:
+
+    melate.pl -lottery melate -count 20 -g
+
+    or
+
+    melate.pl -l melate -c 20 -g
 
 =item B<-download or -d>
 
