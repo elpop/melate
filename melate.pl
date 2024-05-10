@@ -728,21 +728,21 @@ sub lottery {
         # Print the totals of a ball occurences
         totals(\%totals,$range, \%totals_options);
         print "\n";
-    }
 
-    # graph on text the balls ocurrences
-    if (exists($options{'graph'})) {
-        text_graph(\%totals,$range, \%graph_options);
-        print "\n";
-    }
-        
-    if (exists($options{'break'})) {
-        for(my $i=0;$#break_array>=$i;$i++){
-            ocurrences($break_array[$i],$range, \%break_ocurrences_options);
+        # graph on text the balls ocurrences
+        if (exists($options{'graph'})) {
+            text_graph(\%totals,$range, \%graph_options);
             print "\n";
         }
+    
+        if (exists($options{'break'})) {
+            for(my $i=0;$#break_array>=$i;$i++){
+                ocurrences($break_array[$i],$range, \%break_ocurrences_options);
+                print "\n";
+            }
+        }
     }
-
+    
     # Print the numbers order by occurrences
     ocurrences(\%totals,$range, \%ocurrences_options);
     print "\n";
