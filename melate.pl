@@ -483,32 +483,25 @@ sub header_numbers {
 #----------------------------------#
 sub ocurrences {
     my ($total_ref, $max, $options_ref) = @_;
-    my $aux = 0;
     # search balls not in the draw and put 0 value
     for (my $ball = 1;$ball <=$max;$ball++) {
         unless (exists($total_ref->{$ball})) {
             $total_ref->{$ball} = 0;
         }
     }
-
+    print ' ' x 17;
     print $options_ref->{color}{header} unless($options{'text'});
+    print ' ';
     foreach my $ball (sort { $total_ref->{$b} <=> $total_ref->{$a} or $a <=> $b} keys %{$total_ref}) {
-        if ( $aux ne $total_ref->{$ball} ) {
-            print '  ';
-            $aux = $total_ref->{$ball};
-        }
         print sprintf("%02d",$ball) . ' ';
     }
     print RESET unless($options{'text'});
     print "\n";
 
+    print ' ' x 17;
     print $options_ref->{color}{detail} unless($options{'text'});
-    $aux = 0;
+    print ' ';
     foreach my $ball (sort { $total_ref->{$b} <=> $total_ref->{$a} or $a <=> $b} keys %{$total_ref}) {
-        if ( $aux ne $total_ref->{$ball} ) {
-            print '  ';
-            $aux = $total_ref->{$ball};
-        }
         print sprintf("%2s",$total_ref->{$ball}) . ' ';
     }
     print RESET unless($options{'text'});
@@ -546,8 +539,9 @@ sub text_graph {
     my $max_value = 0;
 
     # print the balls numbers
+    print ' ' x 12;
     print $options_ref->{color}{balls} unless($options{'text'});
-    print '    ';
+    print ' ' x 6;
     for (my $i = 1;$i<=$max;$i++) {
         #print '   ';
         print sprintf("%02d ",$i);
@@ -561,9 +555,11 @@ sub text_graph {
 
     # graph on text the results
     for (my $axis = $max_value + 1; $axis >= 1; $axis--) {
+        print ' ' x 12;
         print $options_ref->{color}{axis} unless($options{'text'});
-        print sprintf(" %2s ", $axis);
+        print sprintf(" %3s ", $axis);
         print RESET unless($options{'text'});
+        print ' ';
         for (my $ball = 1;$ball <=$max;$ball++) {
             if (exists($total_ref->{$ball})) {
                 if ($axis <= $total_ref->{$ball}) {
@@ -592,9 +588,11 @@ sub text_graph {
         print "\n";
     }
     # print the balls totals
+    print ' ' x 12;
     print $options_ref->{color}{axis} unless($options{'text'});
-    print '    ';
+    print ' ' x 5;
     print $options_ref->{color}{totals} unless($options{'text'});
+    print ' ';
     for (my $i = 1;$i<=$max;$i++) {
         print sprintf("%2s ", $total_ref->{$i});
     }
@@ -730,14 +728,14 @@ sub lottery {
         # Print the totals of a ball occurences
         totals(\%totals,$range, \%totals_options);
         print "\n";
-
-        # graph on text the balls ocurrences
-        if (exists($options{'graph'})) {
-            text_graph(\%totals,$range, \%graph_options);
-            print "\n";
-        }
     }
 
+    # graph on text the balls ocurrences
+    if (exists($options{'graph'})) {
+        text_graph(\%totals,$range, \%graph_options);
+        print "\n";
+    }
+        
     if (exists($options{'break'})) {
         for(my $i=0;$#break_array>=$i;$i++){
             ocurrences($break_array[$i],$range, \%break_ocurrences_options);
