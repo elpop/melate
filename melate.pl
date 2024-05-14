@@ -67,7 +67,7 @@ my %lottery_info_options = ('color' => BG_YELLOW . BRIGHT .FG_BLACK,);
 
 my %header_numbers_options = ('color' => BG_WHITE . BRIGHT . FG_BLACK,);
 
-my %matrix_options = ('color' => { 'draw'   => BG_WHITE . BRIGHT .FG_BLACK,
+my %matrix_options = ('color' => { 'draw'   => BG_WHITE . BRIGHT . FG_BLACK,
                                    'date'   => BG_WHITE . FG_BLACK,
                                    'detail' => BG_BLACK . BRIGHT . FG_WHITE, }, );
 
@@ -740,7 +740,7 @@ sub lottery {
             text_graph(\%totals,$range, \%graph_options);
             print "\n";
         }
-    
+
         if (exists($options{'break'})) {
             for(my $i=0;$#break_array>=$i;$i++){
                 $break_ocurrences_options{leyend} = 'Break zone ' . ($i + 1);
@@ -749,7 +749,7 @@ sub lottery {
             }
         }
     }
-    
+
     # Print the numbers order by occurrences
     ocurrences(\%totals,$range, \%ocurrences_options);
     print "\n";
