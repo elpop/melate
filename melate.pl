@@ -71,7 +71,7 @@ my %matrix_options = ('color' => { 'draw'   => BG_WHITE . BRIGHT .FG_BLACK,
                                    'date'   => BG_WHITE . FG_BLACK,
                                    'detail' => BG_BLACK . BRIGHT . FG_WHITE, }, );
 
-my %totals_options = ('leyend' => 'Totals ',
+my %totals_options = ('leyend' => 'Totals',
                       'color' => { 'leyend' => BG_WHITE . BRIGHT . FG_BLACK,
                                    'detail' => BG_RED   . BRIGHT . FG_WHITE, }, );
 
@@ -80,13 +80,16 @@ my %graph_options = ('color' => { 'axis'   => BG_WHITE . BRIGHT . FG_BLACK,
                                   'balls'  => BG_WHITE . BRIGHT . FG_BLACK,
                                   'totals' => BG_RED   . BRIGHT . FG_WHITE,}, );
 
-my %ocurrences_options = ('color' => { 'header' => BG_RED . BRIGHT . FG_BLACK,
+my %ocurrences_options = ('leyend' => 'Totals',
+                          'color' => { 'header' => BG_RED . BRIGHT . FG_BLACK,
                                        'detail' => BG_RED . BRIGHT . FG_WHITE, }, );
 
-my %weight_ocurrences_options = ('color' => { 'header' => BG_GREEN . BRIGHT . FG_BLACK,
+my %weight_ocurrences_options = ('leyend' => 'Weight Totals',
+                                 'color' => { 'header' => BG_GREEN . BRIGHT . FG_BLACK,
                                               'detail' => BG_GREEN . BRIGHT . FG_WHITE, }, );
 
-my %break_ocurrences_options = ('color' => { 'header' => BG_CYAN . BRIGHT . FG_BLACK,
+my %break_ocurrences_options = ('leyend' => 'Break zone',
+                                'color' => { 'header' => BG_CYAN . BRIGHT . FG_BLACK,
                                              'detail' => BG_CYAN . BRIGHT . FG_WHITE, }, );
 
 my %break_options = ('leyend' => 'Subtotal ',
@@ -489,7 +492,8 @@ sub ocurrences {
             $total_ref->{$ball} = 0;
         }
     }
-    print ' ' x 17;
+    #print ' ' x 17;
+    print sprintf(" %15s ",$options_ref->{leyend});
     print $options_ref->{color}{header} unless($options{'text'});
     print ' ';
     foreach my $ball (sort { $total_ref->{$b} <=> $total_ref->{$a} or $a <=> $b} keys %{$total_ref}) {
@@ -716,10 +720,12 @@ sub lottery {
             if (exists($options{'break'})) {
                 $break = $options{break};
                 if ( ($break_line % $break) == 0) {
+                    $break_options{leyend} = 'Break zone ' . ($break_count + 1);
                     totals($break_array[$break_count],$range,\%break_options);
                     $break_count++;
                 }
                 elsif ( $break_line >= scalar(keys %results)){
+                    $break_options{leyend} = 'Break zone ' . ($break_count + 1);
                     totals($break_array[$break_count], $range, \%break_options );
                 }
             }
@@ -737,6 +743,7 @@ sub lottery {
     
         if (exists($options{'break'})) {
             for(my $i=0;$#break_array>=$i;$i++){
+                $break_ocurrences_options{leyend} = 'Break zone ' . ($i + 1);
                 ocurrences($break_array[$i],$range, \%break_ocurrences_options);
                 print "\n";
             }
