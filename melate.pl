@@ -386,6 +386,17 @@ sub search_product {
 # Insert a draw result in the 'results' table #
 #---------------------------------------------#
 sub add {
+    
+    # Take out blank spaces in the right and left of the variable
+    sub _Trim {
+        my @out = @_;
+        for (@out) {
+             s/^\s+//g;
+             s/\s+$//g;
+        }
+        return wantarray ? @out : $out[0];
+    }
+    
     # if have values, proceed
     if ( $options{'add'}{'product'}
       && $options{'add'}{'draw'}
@@ -398,8 +409,9 @@ sub add {
                 unless ( already_on_results($product, $options{'add'}{'draw'}) ) {
                     if ($options{'add'}{'date'} =~ /^((19|20)\d\d)-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])$/) {
                         if ($options{'add'}{'award'} =~ /^\d+/) {
-                            if ($options{'add'}{'balls'} =~ /^\d+,\d+,\d+,\d+,\d+,\d+/) {
-                                my ($r1,$r2,$r3,$r4,$r5,$r6,$r7) = split(/,/, $options{'add'}{'balls'});
+                            if ($options{'add'}{'balls'} =~ /^\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*/) {
+                                my ($r1,$r2,$r3,$r4,$r5,$r6,$r7) = _Trim( split(/,/, $options{'add'}{'balls'}) );
+                                print "OJO=$r1,$r2,$r3,$r4,$r5,$r6,$r7\n";
                                 $sth_insert->execute($product,$options{'add'}{'draw'},$options{'add'}{'date'}, $r1,$r2,$r3,$r4,$r5,$r6,$r7,$options{'add'}{'award'});
                                 print "result added\n";
                             }
