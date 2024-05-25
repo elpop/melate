@@ -411,7 +411,6 @@ sub add {
                         if ($options{'add'}{'award'} =~ /^\d+/) {
                             if ($options{'add'}{'balls'} =~ /^\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*/) {
                                 my ($r1,$r2,$r3,$r4,$r5,$r6,$r7) = _Trim( split(/,/, $options{'add'}{'balls'}) );
-                                print "OJO=$r1,$r2,$r3,$r4,$r5,$r6,$r7\n";
                                 $sth_insert->execute($product,$options{'add'}{'draw'},$options{'add'}{'date'}, $r1,$r2,$r3,$r4,$r5,$r6,$r7,$options{'add'}{'award'});
                                 print "result added\n";
                             }
