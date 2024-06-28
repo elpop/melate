@@ -52,6 +52,15 @@ use constant {
     FG_CYAN     => "\033[36m",
     FG_WHITE    => "\033[37m",
 
+    FG_BRIGHT_BLACK    => "\033[90m",
+    FG_BRIGHT_RED      => "\033[91m",
+    FG_BRIGHT_GREEN    => "\033[92m",
+    FG_BRIGHT_YELLOW   => "\033[93m",
+    FG_BRIGHT_BLUE     => "\033[94m",
+    FG_BRIGHT_MAGENTA  => "\033[95m",
+    FG_BRIGHT_CYAN     => "\033[96m",
+    FG_BRIGHT_WHITE    => "\033[97m",
+
     BG_BLACK    => "\033[40m",
     BG_RED      => "\033[41m",
     BG_GREEN    => "\033[42m",
@@ -60,24 +69,33 @@ use constant {
     BG_MAGENTA  => "\033[45m",
     BG_CYAN     => "\033[46m",
     BG_WHITE    => "\033[47m",
+
+    BG_BRIGHT_BLACK    => "\033[100m",
+    BG_BRIGHT_RED      => "\033[101m",
+    BG_BRIGHT_GREEN    => "\033[102m",
+    BG_BRIGHT_YELLOW   => "\033[103m",
+    BG_BRIGHT_BLUE     => "\033[104m",
+    BG_BRIGHT_MAGENTA  => "\033[105m",
+    BG_BRIGHT_CYAN     => "\033[106m",
+    BG_BRIGHT_WHITE    => "\033[107m",
 };
 
 # Customize color output
-my %lottery_info_options = ('color' => BG_YELLOW . BRIGHT .FG_BLACK,);
+my %lottery_info_options = ('color' => BG_BRIGHT_YELLOW . BRIGHT .FG_BLACK,);
 
-my %header_numbers_options = ('color' => BG_WHITE . BRIGHT . FG_BLACK,);
+my %header_numbers_options = ('color' => BG_BRIGHT_WHITE . BRIGHT . FG_BLACK,);
 
 my %matrix_options = ('color' => { 'draw'   => BG_WHITE . BRIGHT . FG_BLACK,
                                    'date'   => BG_WHITE . FG_BLACK,
                                    'detail' => BG_BLACK . BRIGHT . FG_WHITE, }, );
 
 my %totals_options = ('leyend' => 'Totals',
-                      'color' => { 'leyend' => BG_WHITE . BRIGHT . FG_BLACK,
+                      'color' => { 'leyend' => BG_BRIGHT_WHITE . BRIGHT . FG_BLACK,
                                    'detail' => BG_RED   . BRIGHT . FG_WHITE, }, );
 
-my %graph_options = ('color' => { 'axis'   => BG_WHITE . BRIGHT . FG_BLACK,
-                                  'bar'    => BG_CYAN  . BRIGHT . FG_BLACK,
-                                  'balls'  => BG_WHITE . BRIGHT . FG_BLACK,
+my %graph_options = ('color' => { 'axis'   => BG_BRIGHT_WHITE . BRIGHT . FG_BLACK,
+                                  'bar'    => BG_BRIGHT_CYAN  . BRIGHT . FG_BLACK,
+                                  'balls'  => BG_BRIGHT_WHITE . BRIGHT . FG_BLACK,
                                   'totals' => BG_RED   . BRIGHT . FG_WHITE,}, );
 
 my %ocurrences_options = ('leyend' => 'Totals',
