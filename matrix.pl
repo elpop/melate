@@ -369,17 +369,27 @@ sub lottery {
         my ($draw, $date, $prize) = get_prize($info_ref->{id});
         # print general lottery info
         lottery_info($info_ref->{name}, $date, $prize, $quantity, \%lottery_info_options);
+        my $char = '';
+        if ($info_ref->{id} == 41) {
+            $char = 'R';
+        }
+        elsif ($info_ref->{id} == 34) {
+            $char = 'r';
+        }
+        else {
+            $char = 'M';
+        }
         # Search the resulst and draws of a lottery product
         $ret = $sth_results->execute($info_ref->{id},$quantity);
         while (my $results_ref = $sth_results->fetchrow_hashref) {
             $results{$results_ref->{draw}}{date} = $results_ref->{date_time};
-            $results{$results_ref->{draw}}{balls}{$results_ref->{r1}} += 1; #$results_ref->{r1};
-            $results{$results_ref->{draw}}{balls}{$results_ref->{r2}} += 1; #$results_ref->{r2};
-            $results{$results_ref->{draw}}{balls}{$results_ref->{r3}} += 1; #$results_ref->{r3};
-            $results{$results_ref->{draw}}{balls}{$results_ref->{r4}} += 1; #$results_ref->{r4};
-            $results{$results_ref->{draw}}{balls}{$results_ref->{r5}} += 1; #$results_ref->{r5};
-            $results{$results_ref->{draw}}{balls}{$results_ref->{r6}} += 1; #$results_ref->{r6};
-            $results{$results_ref->{draw}}{balls}{$results_ref->{r7}} += 1 if ($info_ref->{additional} == 1);
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r1}} .= $char; #$results_ref->{r1};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r2}} .= $char; #$results_ref->{r2};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r3}} .= $char; #$results_ref->{r3};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r4}} .= $char; #$results_ref->{r4};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r5}} .= $char; #$results_ref->{r5};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r6}} .= $char; #$results_ref->{r6};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r7}} .= $char if ($info_ref->{additional} == 1);
         }
         $sth_results->finish();
     }
@@ -395,12 +405,12 @@ sub lottery {
         $break_line++;
         foreach my $ball  (sort keys %{$results{$draw}{balls}}) {
             if (exists($totals{$ball})) {                
-                $totals{$ball} += $results{$draw}{balls}{$ball};
-                $break{$ball}  += $results{$draw}{balls}{$ball};
+                $totals{$ball} += length($results{$draw}{balls}{$ball});
+                $break{$ball}  += length($results{$draw}{balls}{$ball});
             }
             else {
-                $totals{$ball} = $results{$draw}{balls}{$ball};
-                $break{$ball}  = $results{$draw}{balls}{$ball};
+                $totals{$ball} = length($results{$draw}{balls}{$ball});
+                $break{$ball}  = length($results{$draw}{balls}{$ball});
             }
         }
         if (exists($options{'break'})) {
@@ -434,16 +444,17 @@ sub lottery {
             print ' ';
             for (my $i = 1;$i<=$range;$i++) {
                 if (exists($results{$draw}{balls}{$i})) {
-                    if ($results{$draw}{balls}{$i} == 2) {
+                    my $len = length("$results{$draw}{balls}{$i}");
+                    if ( $len == 2 ) {
                         print $matrix_options{color}{two}  unless($options{'text'});
                     }
-                    elsif ($results{$draw}{balls}{$i} == 3){
+                    elsif ( $len == 3 ){
                         print $matrix_options{color}{three}  unless($options{'text'});
                     }
                     else {
                         print $matrix_options{color}{one}  unless($options{'text'}); 
                     }
-                    print sprintf(" %1d ",$results{$draw}{balls}{$i});
+                    print sprintf("%-3s",$results{$draw}{balls}{$i});
                     print $matrix_options{color}{one}  unless($options{'text'});
                     #print RESET  unless($options{'text'});
                 }
