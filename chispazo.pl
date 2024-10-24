@@ -124,6 +124,8 @@ GetOptions(\%options,
            'break=i',
            'text',
            'weight',
+           'morning',
+           'night',
 );
 
 my $init_flag = 0;
@@ -424,18 +426,39 @@ sub lottery {
     my %totals = ();
     my %results = ();
     $quantity = 30 unless($quantity);
+    if ($options{'morning'} or $options{'night'}) {
+        $quantity *= 2;
+    }
     my $break = 0;
     my $range = 28;
 
     # Search the resulst and draws of a lottery product
     my $ret = $sth_results->execute($quantity);
     while (my $results_ref = $sth_results->fetchrow_hashref) {
-        $results{$results_ref->{draw}}{date} = $results_ref->{date_time};
-        $results{$results_ref->{draw}}{balls}{$results_ref->{r1}} = $results_ref->{r1};
-        $results{$results_ref->{draw}}{balls}{$results_ref->{r2}} = $results_ref->{r2};
-        $results{$results_ref->{draw}}{balls}{$results_ref->{r3}} = $results_ref->{r3};
-        $results{$results_ref->{draw}}{balls}{$results_ref->{r4}} = $results_ref->{r4};
-        $results{$results_ref->{draw}}{balls}{$results_ref->{r5}} = $results_ref->{r5};
+        if ( (($results_ref->{draw} % 2) == 0) && $options{'night'} ) {
+            $results{$results_ref->{draw}}{date} = $results_ref->{date_time};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r1}} = $results_ref->{r1};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r2}} = $results_ref->{r2};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r3}} = $results_ref->{r3};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r4}} = $results_ref->{r4};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r5}} = $results_ref->{r5};
+        }
+        elsif ( (!($results_ref->{draw} % 2) == 0) && $options{'morning'} ) {
+            $results{$results_ref->{draw}}{date} = $results_ref->{date_time};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r1}} = $results_ref->{r1};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r2}} = $results_ref->{r2};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r3}} = $results_ref->{r3};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r4}} = $results_ref->{r4};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r5}} = $results_ref->{r5};
+        }
+        elsif (!$options{'morning'} && !$options{'night'}) {
+            $results{$results_ref->{draw}}{date} = $results_ref->{date_time};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r1}} = $results_ref->{r1};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r2}} = $results_ref->{r2};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r3}} = $results_ref->{r3};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r4}} = $results_ref->{r4};
+            $results{$results_ref->{draw}}{balls}{$results_ref->{r5}} = $results_ref->{r5};
+        }
     }
     $sth_results->finish();
     # break analysis variables
