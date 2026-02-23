@@ -88,7 +88,7 @@ sub export_to_csv {
     while (my $info_ref = $sth->fetchrow_hashref) {
         print 'NPRODUCTO,CONCURSO,R1,R2,R3,R4,R5,R6,';
         print 'R7,' if ($info_ref->{additional} == 1);
-        print 'BOLSA,FECHA' . "\n";
+        print 'BOLSA,FECHA' . "\r\n";
         $range = $info_ref->{range};
         # Search the resulst and draws of a lottery product
         $ret = $sth_results->execute($info_ref->{id});
@@ -103,7 +103,7 @@ sub export_to_csv {
             print "$results_ref->{r7}," if ($info_ref->{additional} == 1);
             print "$results_ref->{award},";
             my ($year,$month,$day) = split('-', $results_ref->{date_time});
-            print sprintf("%02d\/%02d\/%04d\n", $day, $month, $year);
+            print sprintf("%02d\/%02d\/%04d\r\n", $day, $month, $year);
         }
         $sth_results->finish();
     }
