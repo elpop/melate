@@ -136,3 +136,61 @@ def test_chi_square_melate_real_does_not_reject(real_db_path, monkeypatch):
         f"χ² strongly rejects uniformity (p={result.p_value:.4e}); "
         "treat as suspected bug per design §3 anti-bug rule"
     )
+
+
+from stats.fairness import bayesian_fairness, BayesianFairnessResult
+
+
+def test_bayesian_fairness_returns_one_interval_per_category():
+    rng = np.random.default_rng(0)
+    samples = pd.Series(rng.integers(1, 57, size=10_000))
+    result = bayesian_fairness(samples, n_categories=56)
+    assert isinstance(result, BayesianFairnessResult)
+    assert result.posterior_alpha.shape == (56,)
+    assert len(result.credible_intervals_95) == 56
+    assert set(result.credible_intervals_95.columns) >= {"ball", "mean", "lo", "hi"}
+
+
+def test_bayesian_fairness_uniform_data_credible_intervals_contain_uniform():
+    """Under genuinely uniform data, ~95% of CIs should contain 1/n_categories."""
+    rng = np.random.default_rng(42)
+    samples = pd.Series(rng.integers(1, 57, size=100_000))
+    result = bayesian_fairness(samples, n_categories=56)
+    # 95% CI → expect ≥ 90% containment in practice (some sampling slack)
+    assert result.contains_uniform_count >= 50, (
+        f"only {result.contains_uniform_count}/56 CIs contain uniform"
+    )
+    # Bayes factor should favor "fair" model
+    assert result.log_bayes_factor_fair_vs_dirichlet > 0, (
+        f"BF favors flexible model on uniform data: log BF={result.log_bayes_factor_fair_vs_dirichlet}"
+    )
+
+
+def test_bayesian_fairness_biased_data_few_cis_contain_uniform():
+    """Strong over-representation of one ball → its CI must exclude uniform,
+    and the Bayes factor must favor the flexible (biased) model."""
+    rng = np.random.default_rng(1)
+    samples = pd.Series(
+        np.concatenate([rng.integers(1, 57, size=10_000),
+                        np.full(4_000, 7)])  # ball 7 heavily over-represented
+    )
+    result = bayesian_fairness(samples, n_categories=56)
+    # ball 7's CI must lie entirely above uniform
+    ball7 = result.credible_intervals_95.iloc[6]  # ball=7 is row index 6
+    uniform = 1.0 / 56
+    assert ball7["lo"] > uniform
+    # BF must clearly favor flexible (log BF << 0)
+    assert result.log_bayes_factor_fair_vs_dirichlet < -10
+
+
+@pytest.mark.integration
+def test_bayesian_fairness_melate_real_favors_fair_model(real_db_path, monkeypatch):
+    monkeypatch.setenv("MELATE_DB", str(real_db_path))
+    data = load_draws("melate")
+    result = bayesian_fairness(data.draws_long["ball"], data.range)
+    print(f"\nMelate Bayesian: log BF={result.log_bayes_factor_fair_vs_dirichlet:.2f}, "
+          f"CIs containing uniform: {result.contains_uniform_count}/{data.range}")
+    # On the homogeneous era, the fair model must be preferred.
+    assert result.log_bayes_factor_fair_vs_dirichlet > 0
+    # Most CIs should contain uniform (95% nominally; allow ≥ 85% in real data).
+    assert result.contains_uniform_count >= int(0.85 * data.range)

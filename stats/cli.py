@@ -9,14 +9,14 @@ import matplotlib
 matplotlib.use("Agg")
 
 from stats.db import load_draws
-from stats.fairness import chi_square_uniformity
+from stats.fairness import chi_square_uniformity, bayesian_fairness
 from stats.backtest import weight_walkforward
 from stats.rollover import derive_jackpot_won
 from stats.behavior import rollover_excess
 from stats.report import build_report
 
 
-ANALYSES = {"chi2", "backtest", "rollover", "behavior", "all"}
+ANALYSES = {"chi2", "bayes", "backtest", "rollover", "behavior", "all"}
 
 
 def _run_chi2(data) -> dict:
@@ -44,6 +44,28 @@ def _run_chi2_r7(data) -> dict:
         "figure": res.fig,
         "expected_per_spec": "p > 0.05 (la bola adicional debe ser uniforme)",
         "matches_expectation": res.p_value > 0.05,
+    }
+
+
+def _run_bayes(data) -> dict:
+    """Bayesian Dirichlet-multinomial fairness (tarea 6 del spec original)."""
+    res = bayesian_fairness(data.draws_long["ball"], data.range)
+    contains_pct = 100.0 * res.contains_uniform_count / data.range
+    return {
+        "title": "Bayesian fairness (Dirichlet-multinomial, r1..r6)",
+        "summary": (
+            f"log BF (fair vs flexible) = {res.log_bayes_factor_fair_vs_dirichlet:+.2f}; "
+            f"{res.contains_uniform_count}/{data.range} ({contains_pct:.0f}%) "
+            f"CIs 95% contienen la uniforme"
+        ),
+        "figure": res.fig,
+        "expected_per_spec": (
+            "log BF > 0 (favorece fair) y ~95% de CIs contienen la uniforme"
+        ),
+        "matches_expectation": (
+            res.log_bayes_factor_fair_vs_dirichlet > 0
+            and res.contains_uniform_count >= int(0.85 * data.range)
+        ),
     }
 
 
@@ -113,13 +135,15 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if "all" in requested:
-        requested = {"chi2", "backtest", "behavior"}
+        requested = {"chi2", "bayes", "backtest", "behavior"}
 
     sections = []
     if "chi2" in requested:
         sections.append(_run_chi2(data))
         if data.has_additional:
             sections.append(_run_chi2_r7(data))
+    if "bayes" in requested:
+        sections.append(_run_bayes(data))
     if "backtest" in requested:
         sections.append(_run_backtest(data))
     if "behavior" in requested:
