@@ -16,13 +16,14 @@ from stats.fairness import (
 )
 from stats.multivariate import cooccurrence_test
 from stats.drift import pettitt_per_ball
+from stats.serial import serial_independence_per_ball
 from stats.backtest import weight_walkforward
 from stats.rollover import derive_jackpot_won
 from stats.behavior import rollover_excess
 from stats.report import build_report
 
 
-ANALYSES = {"chi2", "bayes", "cooccurrence", "gaps", "drift",
+ANALYSES = {"chi2", "bayes", "cooccurrence", "gaps", "drift", "serial",
             "backtest", "behavior", "all"}
 
 
@@ -189,6 +190,31 @@ def _run_drift(data) -> dict:
     }
 
 
+def _run_serial(data) -> dict:
+    """Runs test + lag-1 autocorrelation per ball (tarea 9)."""
+    res = serial_independence_per_ball(
+        data.draws_wide, range_=data.range, n_balls=data.n_balls,
+    )
+    expected_at_nominal = 0.05 * data.range
+    return {
+        "title": "Serial independence (runs + lag-1 autocorrelation, r1..r6)",
+        "summary": (
+            f"n_draws={res.n_draws}; Bonferroni threshold "
+            f"(α/(2·range)) = {res.bonferroni_threshold:.4f}\n"
+            f"Balls significant at α=0.05 (uncorrected): "
+            f"{res.n_significant_at_nominal_05}/{data.range} "
+            f"(expected by chance ≈ {expected_at_nominal:.0f})\n"
+            f"Balls significant at Bonferroni: "
+            f"**{res.n_significant_at_bonferroni}**"
+        ),
+        "figure": res.fig,
+        "expected_per_spec": (
+            "0 bolas sobreviven Bonferroni; runs y autocorrelaciones dentro de banda"
+        ),
+        "matches_expectation": res.n_significant_at_bonferroni == 0,
+    }
+
+
 def _run_backtest(data) -> dict:
     res = weight_walkforward(
         data.draws_wide, n_balls=data.n_balls, range_=data.range,
@@ -255,7 +281,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if "all" in requested:
-        requested = {"chi2", "bayes", "cooccurrence", "gaps", "drift",
+        requested = {"chi2", "bayes", "cooccurrence", "gaps", "drift", "serial",
                      "backtest", "behavior"}
 
     sections = []
@@ -272,6 +298,8 @@ def main(argv: list[str] | None = None) -> int:
         sections.append(_run_gaps(data))
     if "drift" in requested:
         sections.append(_run_drift(data))
+    if "serial" in requested:
+        sections.append(_run_serial(data))
     if "backtest" in requested:
         sections.append(_run_backtest(data))
     if "behavior" in requested:
