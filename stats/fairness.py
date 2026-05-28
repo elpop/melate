@@ -42,3 +42,19 @@ def chi_square_uniformity(samples: pd.Series, n_categories: int) -> ChiSquareRes
         stat=float(stat), dof=dof, p_value=float(p),
         observed=counts, expected=expected, fig=fig,
     )
+
+
+def correct_pvalues(
+    pvals: pd.Series,
+    *,
+    method: Literal["bonferroni", "fdr_bh"],
+) -> pd.DataFrame:
+    """Apply multiple-comparisons correction and return raw vs corrected p-values."""
+    from statsmodels.stats.multitest import multipletests
+
+    reject, corrected, _, _ = multipletests(pvals.values, alpha=0.05, method=method)
+    return pd.DataFrame({
+        "pval_raw": pvals.values,
+        "pval_corrected": corrected,
+        "significant_at_05": reject,
+    }, index=pvals.index)
