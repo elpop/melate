@@ -287,6 +287,39 @@ nueva (p. ej. `winners`) sin tocar las tablas existentes.
 *Dependencia:* F0. **Costo/riesgo:** una petición por sorteo (~4,200), páginas históricas viejas
 pueden no existir todas, y el formato puede cambiar. Frágil; hacerlo solo si se quiere la v2.
 
+> **⚠️ ACTUALIZACIÓN 2026-05-28 — feasibility check sobre el sitio actual:** la
+> versión fuerte que esta tarea describe **no es viable con los endpoints públicos
+> de `loterianacional.gob.mx` en su forma actual**. Reporte de probe:
+>
+> 1. **No hay URL estática por sorteo**. Probé 7 patrones plausibles
+>    (`/Melate/Sorteo/<n>`, `/Melate/ConsultaSorteo/<n>`, `/api/Melate/<n>`, etc.);
+>    todas devuelven la página genérica de Resultados, no el detalle por sorteo.
+> 2. **Solo el último sorteo trae el desglose con "Total de ganadores"** en HTML de
+>    `/Melate/Resultados`. El histórico que muestra esa página son **solo 15 sorteos**,
+>    y para esos 15 solo se publica la combinación ganadora (no la categoría).
+> 3. **Datos Abiertos** sí expone XLSX descargables pero a granularidad agregada:
+>    - `/DatosAbiertos/GanadoresSorteos`: ganadores **totales anuales por juego**
+>      (2015-2024).
+>    - `/DatosAbiertos/EstructuraPremiacion`: % de venta a premios y % a cada
+>      categoría (información fija de reglamento).
+>    - `/DatosAbiertos/IngresosVentas`: ventas mensuales totales (todos los juegos
+>      combinados).
+>    - `/DatosAbiertos/VentasSorteos`: participaciones por estado, por trimestre.
+>
+> **Conclusión:** la "v2 fuerte de tarea 5" tal como el spec la describía queda
+> **bloqueada por disponibilidad del dato**. Caminos posibles si esto se retoma:
+> - **(a) Versión media con datos anuales**: ingerir los XLSX de Datos Abiertos y
+>   correr la comparación Poisson a nivel anual agregado en vez de por sorteo.
+>   Pierde resolución por sorteo pero se hace con los datos que el portal sí publica.
+> - **(b) Latest-only scraping incremental**: cron diario que extrae el desglose
+>   del último sorteo de `/Melate/Resultados` y lo persiste; en 1-2 años hay
+>   dataset por sorteo. Útil para versiones futuras, inútil para v2 hoy.
+> - **(c) Wayback Machine**: cobertura parcial e impredecible; frágil.
+>
+> Decisión 2026-05-28: dejar la tarea cerrada como deuda inviable hasta que
+> Lotería Nacional vuelva a publicar el desglose por sorteo de forma estable.
+> La v1 + Tier 3 ya entregan los 3 baldes del proyecto sin necesidad de este dato.
+
 ---
 
 ## 3. Recomendación de alcance para el primer pase
