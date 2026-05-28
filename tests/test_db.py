@@ -100,7 +100,7 @@ def test_load_draws_raises_on_duplicate_balls(tmp_path, monkeypatch):
 
 @pytest.mark.integration
 def test_load_draws_real_db_matches_count(real_db_path, monkeypatch):
-    """N from load_draws must match SELECT COUNT(*) for every product."""
+    """N from load_draws(since='1900-01-01') must match SELECT COUNT(*) for every product."""
     import sqlite3
     monkeypatch.setenv("MELATE_DB", str(real_db_path))
     conn = sqlite3.connect(real_db_path)
@@ -110,9 +110,27 @@ def test_load_draws_real_db_matches_count(real_db_path, monkeypatch):
             expected = conn.execute(
                 "SELECT COUNT(*) FROM results WHERE product_id = ?", (pid,)
             ).fetchone()[0]
-            data = load_draws(name)
+            data = load_draws(name, since="1900-01-01")  # disable era filter
             assert len(data.draws_wide) == expected, (
                 f"{name}: load_draws gave {len(data.draws_wide)}, DB has {expected}"
             )
     finally:
         conn.close()
+
+
+@pytest.mark.integration
+def test_load_draws_default_filters_to_current_format_era(real_db_path, monkeypatch):
+    """Default since for Melate/Revancha is 2007-01-01; result must contain only
+    draws under the 6/56 format and span the post-2007 era."""
+    import pandas as pd
+    monkeypatch.setenv("MELATE_DB", str(real_db_path))
+    melate_full = load_draws("melate", since="1900-01-01")
+    melate_filtered = load_draws("melate")
+    # The filter must drop a substantial chunk of pre-2007 draws.
+    assert len(melate_filtered.draws_wide) < len(melate_full.draws_wide) - 100
+    # Max ball under filtered era must be exactly 56.
+    max_ball = melate_filtered.draws_wide[
+        ["r1", "r2", "r3", "r4", "r5", "r6"]
+    ].max().max()
+    assert max_ball == 56
+    assert melate_filtered.draws_wide["date"].min() >= pd.Timestamp("2007-01-01")

@@ -58,3 +58,28 @@ def correct_pvalues(
         "pval_corrected": corrected,
         "significant_at_05": reject,
     }, index=pvals.index)
+
+
+def simulate_null(
+    *,
+    range_: int,
+    n_balls: int,
+    n_draws: int,
+    n_sim: int,
+    statistic_fn: Callable[[np.ndarray], float],
+    seed: int,
+) -> np.ndarray:
+    """Simulate `n_sim` fair lotteries, apply `statistic_fn`, return empirical null.
+
+    `statistic_fn` receives a flat 1-D array of length n_draws*n_balls
+    (the "long" form, one ball per element).
+    """
+    rng = np.random.default_rng(seed)
+    out = np.empty(n_sim, dtype=float)
+    for i in range(n_sim):
+        # draw n_balls without replacement per draw, n_draws times
+        draws = np.empty((n_draws, n_balls), dtype=np.int32)
+        for k in range(n_draws):
+            draws[k] = rng.choice(range_, size=n_balls, replace=False) + 1
+        out[i] = statistic_fn(draws.reshape(-1))
+    return out

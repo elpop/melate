@@ -21,6 +21,22 @@ PRODUCT_IDS: dict[str, int] = {
 }
 
 
+# Per-product start of the current ball-range format. Earlier draws used
+# a smaller range (Melate: 1-39 in 1984, 1-44 in 1993, etc.) and mixing
+# eras in a chi-square test artificially rejects uniformity. Verified
+# against the DB at 2026-05-28:
+#   Melate (40):    range grew 39→44→47→50→51→56 between 1984 and 2007.
+#   Revancha (41):  same migration, both products went 6/56 in 2007.
+#   Revanchita (34) and Retro (30) started after the migration and have
+#   been at their current range throughout.
+DEFAULT_SINCE: dict[str, str | None] = {
+    "melate":     "2007-01-01",
+    "revancha":   "2007-01-01",
+    "revanchita": None,
+    "retro":      None,
+}
+
+
 class DataIntegrityError(RuntimeError):
     def __init__(self, draw: int, msg: str) -> None:
         super().__init__(f"draw {draw}: {msg}")
@@ -46,10 +62,23 @@ def _db_path() -> Path:
     return Path.home() / ".melate" / "melate.db"
 
 
-def load_draws(product: str) -> DrawData:
+_SENTINEL_DEFAULT = object()
+
+
+def load_draws(product: str, *, since=_SENTINEL_DEFAULT) -> DrawData:
+    """Load all draws for a product into a DrawData.
+
+    `since`: ISO date string ("YYYY-MM-DD") to filter draws by `date_time >= since`.
+    If omitted, defaults to the per-product current-format start (see DEFAULT_SINCE)
+    so chi-square and friends operate on a homogeneous ball-range era.
+    Pass an explicit value to override (use "1900-01-01" to disable filtering).
+    """
     if product not in PRODUCT_IDS:
         raise ValueError(f"unknown product: {product!r}")
     product_id = PRODUCT_IDS[product]
+
+    if since is _SENTINEL_DEFAULT:
+        since = DEFAULT_SINCE[product]
 
     conn = sqlite3.connect(_db_path())
     try:
@@ -63,14 +92,24 @@ def load_draws(product: str) -> DrawData:
     finally:
         conn.close()
 
-    # Load results
-    query = (
-        "SELECT draw, date_time, r1, r2, r3, r4, r5, r6, r7, award "
-        "FROM results WHERE product_id = ? ORDER BY draw ASC"
-    )
+    # Load results with optional date filter.
+    if since is None:
+        query = (
+            "SELECT draw, date_time, r1, r2, r3, r4, r5, r6, r7, award "
+            "FROM results WHERE product_id = ? ORDER BY draw ASC"
+        )
+        params: tuple = (product_id,)
+    else:
+        query = (
+            "SELECT draw, date_time, r1, r2, r3, r4, r5, r6, r7, award "
+            "FROM results WHERE product_id = ? AND date_time >= ? "
+            "ORDER BY draw ASC"
+        )
+        params = (product_id, since)
+
     conn = sqlite3.connect(_db_path())
     try:
-        raw = pd.read_sql_query(query, conn, params=(product_id,))
+        raw = pd.read_sql_query(query, conn, params=params)
     finally:
         conn.close()
 
