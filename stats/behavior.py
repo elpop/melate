@@ -25,9 +25,11 @@ def rollover_excess(
     n_players_grid,
 ) -> RolloverExcessResult:
     """Compare observed rollover rate against Poisson-uniform predictions for a grid of N."""
-    won = jackpot_df["jackpot_won"].dropna()
-    # rollover ⇔ NOT won
-    rollovers = (won == False).sum()
+    # rollover ⇔ NOT won. dropna keeps only resolved sorteos (last sorteo
+    # and ambiguous ones are NA-marked and excluded). astype(bool) collapses
+    # the nullable BooleanDtype back to numpy bool so ~ works as expected.
+    won = jackpot_df["jackpot_won"].dropna().astype(bool)
+    rollovers = int((~won).sum())
     n_obs = len(won)
     observed_rate = rollovers / n_obs
 

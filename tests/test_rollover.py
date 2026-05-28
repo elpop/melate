@@ -47,9 +47,9 @@ def test_derive_jackpot_won_marks_reset_to_floor():
     awards = pd.Series([floor, 50_000_000, 80_000_000, floor, 40_000_000])
     df = derive_jackpot_won(awards)
     # award[k+1] = floor and award[k] >= threshold * floor → True
-    # draw indices align with award index
-    assert df.loc[2, "jackpot_won"] is True or df.loc[2, "jackpot_won"] == True
-    # last draw has no k+1 → NaN
+    # (bool() unwraps the pandas BooleanDtype scalar so `is True` is exact)
+    assert bool(df.loc[2, "jackpot_won"]) is True
+    # last draw has no k+1 → NA
     assert pd.isna(df.loc[4, "jackpot_won"])
 
 
@@ -74,14 +74,12 @@ def test_derive_jackpot_won_treats_zero_award_as_missing_not_reset():
     """Real Melate draw 2233: award sequence 190M, 0, 213M. award=0 is
     missing data (the prize was not recorded), NOT a reset to floor.
     Must be flagged as ambiguous, not as a win."""
-    # k=2 corresponds to the 0 → it's the "next" of k=1, so k=1's decision
-    # is about transitioning from 190M to 0.
     awards = pd.Series([100_000_000, 190_000_000, 0, 213_000_000, 230_000_000])
     df = derive_jackpot_won(awards)
     # k=1 must NOT be marked as jackpot_won (next is missing data, not a reset)
-    assert df.loc[1, "jackpot_won"] != True
+    assert bool(df.loc[1, "jackpot_won"]) is False
     # And it must be flagged as ambiguous so the operator sees it
-    assert df.loc[1, "ambiguous"] == True
+    assert bool(df.loc[1, "ambiguous"]) is True
 
 
 def test_derive_jackpot_won_does_not_use_zero_as_award_curr():
@@ -89,8 +87,8 @@ def test_derive_jackpot_won_does_not_use_zero_as_award_curr():
     defensible call — mark ambiguous."""
     awards = pd.Series([100_000_000, 0, 30_000_000, 35_000_000])
     df = derive_jackpot_won(awards)
-    assert df.loc[1, "ambiguous"] == True
-    assert df.loc[1, "jackpot_won"] != True
+    assert bool(df.loc[1, "ambiguous"]) is True
+    assert bool(df.loc[1, "jackpot_won"]) is False
 
 
 from stats.db import load_draws

@@ -83,6 +83,7 @@ def load_draws(product: str, *, since=_SENTINEL_DEFAULT) -> DrawData:
     if since is _SENTINEL_DEFAULT:
         since = DEFAULT_SINCE[product]
 
+    # One connection for both queries (M-4).
     conn = sqlite3.connect(_db_path())
     try:
         meta = conn.execute(
@@ -92,26 +93,20 @@ def load_draws(product: str, *, since=_SENTINEL_DEFAULT) -> DrawData:
         if meta is None:
             raise ValueError(f"product id {product_id} not in DB")
         name, range_, n_balls, additional = meta
-    finally:
-        conn.close()
 
-    # Load results with optional date filter.
-    if since is None:
-        query = (
-            "SELECT draw, date_time, r1, r2, r3, r4, r5, r6, r7, award "
-            "FROM results WHERE product_id = ? ORDER BY draw ASC"
-        )
-        params: tuple = (product_id,)
-    else:
-        query = (
-            "SELECT draw, date_time, r1, r2, r3, r4, r5, r6, r7, award "
-            "FROM results WHERE product_id = ? AND date_time >= ? "
-            "ORDER BY draw ASC"
-        )
-        params = (product_id, since)
-
-    conn = sqlite3.connect(_db_path())
-    try:
+        if since is None:
+            query = (
+                "SELECT draw, date_time, r1, r2, r3, r4, r5, r6, r7, award "
+                "FROM results WHERE product_id = ? ORDER BY draw ASC"
+            )
+            params: tuple = (product_id,)
+        else:
+            query = (
+                "SELECT draw, date_time, r1, r2, r3, r4, r5, r6, r7, award "
+                "FROM results WHERE product_id = ? AND date_time >= ? "
+                "ORDER BY draw ASC"
+            )
+            params = (product_id, since)
         raw = pd.read_sql_query(query, conn, params=params)
     finally:
         conn.close()

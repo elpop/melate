@@ -145,7 +145,12 @@ opera sobre `r7_series` explícitamente, en una llamada separada.
        │
        ├──► fairness.chi_square_uniformity(draws.draws_long.ball, draws.range)
        ├──► fairness.chi_square_uniformity(draws.r7_series, draws.range)  [si has_additional]
-       ├──► fairness.simulate_null(draws.range, ...)                      ──► null_dist (para χ²)
+       │    # banda nula del χ² = sanity band analítica [gl − 2√(2·gl), gl + 2√(2·gl)],
+       │    # reportada junto con el p-valor exacto. simulate_null NO se invoca aquí:
+       │    # el χ² goodness-of-fit ya tiene null cerrado vía scipy.stats.chisquare,
+       │    # y la sanity band cubre la lectura visual. simulate_null queda como
+       │    # infraestructura para Tier 3+ (tareas 8 K-S de gaps y 10 drift/CUSUM),
+       │    # donde la distribución nula sí carece de forma cerrada manejable.
        ├──► backtest.weight_walkforward(draws.draws_wide,
        │                                 range_=draws.range, n_balls=draws.n_balls)
        │                                 # baseline analítico (hipergeométrica), no Monte Carlo
@@ -233,6 +238,12 @@ simulate_null(range_: int, n_balls: int, n_draws: int, n_sim: int,
               statistic_fn: Callable, *, seed: int) -> np.ndarray
 ```
 - Genera `n_sim` loterías sintéticas justas, aplica `statistic_fn`, devuelve distribución empírica.
+- **Uso en v1:** infraestructura testeada pero NO surfaceada en el CLI/reporte. El χ² de
+  goodness-of-fit del v1 usa la distribución analítica de `scipy.stats.chisquare` más la
+  sanity band cerrada del Tarea 1; añadir Monte Carlo encima sería ceremonia equivalente.
+  El consumidor real de `simulate_null` son las tareas 8 (K-S de gaps vs. geométrica) y
+  10 (drift/CUSUM), donde la distribución nula sí carece de forma cerrada manejable. Se
+  mantiene en `fairness.py` con sus tests para que esas tareas la encuentren lista.
 
 **Aceptación:** la distribución empírica de χ² bajo nulo converge (KS contra χ²(gl) teórica
 con p > 0.05) con `n_sim ≥ 10_000`.

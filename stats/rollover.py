@@ -62,8 +62,10 @@ def derive_jackpot_won(
     floor = estimate_floor(award, eps=eps)
     n = len(award)
 
-    jackpot = pd.Series([pd.NA] * n, dtype="object")
-    ambiguous = pd.Series([False] * n, dtype=bool)
+    # `boolean` is pandas' nullable bool dtype — supports True/False/NA
+    # without the lint noise of `== True` on object-dtype columns.
+    jackpot = pd.Series([pd.NA] * n, dtype="boolean")
+    ambiguous = pd.Series([False] * n, dtype="bool")
 
     for k in range(n - 1):
         curr_val = award.iloc[k]
