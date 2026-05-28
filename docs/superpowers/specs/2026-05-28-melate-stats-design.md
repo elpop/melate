@@ -6,6 +6,11 @@
 **Repo base:** [`elpop/melate`](https://github.com/elpop/melate) (fork local: `electroniccats/melate`)
 **Estado:** aprobado para pasar a `writing-plans`.
 
+**Canonicidad:** este design doc es **canónico para la v1**. El spec original
+`melate-stats-spec.md` queda como *vision document* del módulo completo (Tiers 1–4) y
+referencia a este diseño para lo que efectivamente se implementa. Si los dos divergen,
+manda éste.
+
 ---
 
 ## 1. Objetivo y restricciones
@@ -43,34 +48,36 @@ cuantifica el único margen real de valor esperado (selección consciente de los
 ## 3. Arquitectura
 
 ```
-melate/                           # repo actual (intacto, en Perl)
-├── melate.pl, chispazo.pl, ...   # nada se toca
-└── stats/                        # módulo nuevo, Python 3.11+
-    ├── __init__.py
-    ├── db.py                     # F0: acceso SQLite → DataFrame
-    ├── rollover.py               # F0.5: deriva jackpot_won desde BOLSA
-    ├── fairness.py               # tareas 1, 2, 3
-    ├── backtest.py               # tarea 4 (walk-forward del -weight)
-    ├── behavior.py               # tarea 5 (selección consciente)
-    ├── report.py                 # ensambla Markdown + figuras
-    ├── cli.py                    # `python -m stats ...`
-    ├── ingest.py                 # tarea 13 (OPCIONAL, off por defecto)
-    ├── requirements.txt
-    └── tests/
-        ├── conftest.py           # fixtures: mini-DB sintética + DB real opcional
-        ├── test_db.py
-        ├── test_rollover.py
-        ├── test_fairness.py
-        ├── test_backtest.py
-        └── test_behavior.py
-report/                            # output (en .gitignore)
-└── melate-stats-YYYYMMDD/
-    ├── report.md
-    └── figs/*.png
+melate/                              # repo actual, raíz del proyecto
+├── melate.pl, chispazo.pl, ...      # código Perl intacto
+├── pyproject.toml                   # config Python (Stats v1)
+├── stats/                           # módulo nuevo, Python 3.11+
+│   ├── __init__.py
+│   ├── db.py                        # F0: acceso SQLite → DataFrame
+│   ├── rollover.py                  # F0.5: deriva jackpot_won desde BOLSA
+│   ├── fairness.py                  # tareas 1, 2, 3
+│   ├── backtest.py                  # tarea 4 (walk-forward del -weight)
+│   ├── behavior.py                  # tarea 5 (selección consciente)
+│   ├── report.py                    # ensambla Markdown + figuras
+│   ├── cli.py                       # `python -m stats ...`
+│   └── ingest.py                    # tarea 13 (OPCIONAL, off por defecto)
+├── tests/                           # pytest, una suite por módulo
+│   ├── conftest.py                  # fixtures: mini-DB sintética + DB real opcional
+│   ├── test_db.py
+│   ├── test_rollover.py
+│   ├── test_fairness.py
+│   ├── test_backtest.py
+│   ├── test_behavior.py
+│   └── test_cli.py                  # smoke test del entry point
+└── report/                          # output (en .gitignore)
+    └── melate-stats-YYYYMMDD/
+        ├── report.md
+        └── figs/*.png
 ```
 
 **Stack:** Python 3.11+, `pandas`, `numpy`, `scipy.stats`, `statsmodels`, `matplotlib`.
 SQLite via `sqlite3` de stdlib. Sin `sqlalchemy`. Sin Jupyter como dependencia obligatoria.
+Dependencias y entry point en `pyproject.toml` (no `requirements.txt`).
 
 **Principios:**
 - Solo lectura sobre `~/.melate/melate.db` (path overridable por env `MELATE_DB`).
@@ -116,8 +123,13 @@ opera sobre `r7_series` explícitamente, en una llamada separada.
 
 **Normalización obligatoria en `load_draws`:**
 - Leer `range`, `additional` de la tabla `products` (nunca hardcodear).
-- Convertir `r7 = ''` (string vacío que mete el código Perl en Revancha/Revanchita,
-  `melate.pl:366`) → `NaN`.
+- Normalizar la columna r7 de SQLite. El código Perl inserta `''` (string vacío) en r7
+  para Revancha/Revanchita (`melate.pl:366`); al leer con pandas la columna queda como
+  `object`. Aplicar explícitamente:
+  ```python
+  df["r7"] = pd.to_numeric(df["r7"], errors="coerce").astype("Int64")
+  ```
+  `Int64` (con I mayúscula) es el tipo nullable de pandas — preserva NaN sin caer a `float64`.
 - `date` parseada a `datetime64`; sorteos ordenados por `draw` ascendente.
 - `r7_series` se materializa si y solo si `has_additional == True`; si no, queda en `None`.
 - Validar: cada sorteo tiene 6 valores únicos en r1–r6, todos en `[1, range]`. Si no,
@@ -133,10 +145,13 @@ opera sobre `r7_series` explícitamente, en una llamada separada.
        │
        ├──► fairness.chi_square_uniformity(draws.draws_long.ball, draws.range)
        ├──► fairness.chi_square_uniformity(draws.r7_series, draws.range)  [si has_additional]
-       ├──► fairness.simulate_null(draws.range, ...)                      ──► null_dist
-       ├──► backtest.weight_walkforward(draws.draws_wide, null_dist)
+       ├──► fairness.simulate_null(draws.range, ...)                      ──► null_dist (para χ²)
+       ├──► backtest.weight_walkforward(draws.draws_wide,
+       │                                 range_=draws.range, n_balls=draws.n_balls)
+       │                                 # baseline analítico (hipergeométrica), no Monte Carlo
        ├──► rollover.derive_jackpot_won(draws.draws_wide["award"])        ──► jackpot_df
-       └──► behavior.rollover_excess(jackpot_df, ...)
+       └──► behavior.rollover_excess(jackpot_df, range_=draws.range,
+                                      n_balls=draws.n_balls, n_players_grid=[...])
        │
        ▼
    report.build_report(all_results)
@@ -154,9 +169,10 @@ load_draws(product: str) -> DrawData
 ```
 
 **Aceptación:**
-- Para los 4 productos: `load_draws(p).draws_long.shape[0] == n_draws * 6`.
+- Para los 4 productos: `load_draws(p).draws_long.shape[0] == n_draws * n_balls`.
 - `r7_series is None` ⟺ `has_additional == False`.
-- Para Melate/Retro: `r7_series.notna().all()` (no quedan `''` colados).
+- Para Melate/Retro: `r7_series.notna().all()` y `r7_series.dtype == "Int64"`
+  (no quedan `''` colados ni cae a `float64`).
 - Sorteo corrupto sintético → levanta `DataIntegrityError(draw=<n>)`.
 
 ---
@@ -167,14 +183,20 @@ load_draws(product: str) -> DrawData
 derive_jackpot_won(award: pd.Series, *, eps: float = 0.05, threshold: float = 1.2) -> pd.DataFrame
 ```
 
-- Estima `floor_estimate` empíricamente (moda del cuartil inferior de la serie).
+- Estima `floor_estimate` empíricamente con doble verificación:
+  - `candidate_min = award.min()`
+  - `candidate_mode = scipy.stats.mode(award[award <= award.quantile(0.10)]).mode`
+  - Si `|candidate_min − candidate_mode| / candidate_mode > eps` → warning y usar
+    `candidate_min` (más conservador).
+  - Si concuerdan → `floor_estimate = candidate_min`.
 - Regla robusta: `jackpot_won[k] := award[k+1] ≤ floor*(1+eps) AND award[k] ≥ floor*threshold`.
 - Maneja último sorteo (`NaN`, no `False`).
 - Columnas del DataFrame de salida: `draw`, `award`, `jackpot_won` (bool|NaN),
   `ambiguous` (bool), `floor_estimate` (constante).
 
 **Aceptación:**
-- Sobre Melate real, `floor_estimate ≈ 30_000_000` (±10%).
+- Sobre Melate real, `floor_estimate ≈ 30_000_000` (±10%); `floor_estimate == award.min()`
+  modulo el sanity check.
 - Reset documentado 4197→4198 marca `jackpot_won[4197] == True`.
 - `ambiguous.mean() < 0.05` (sanity: si más, hay bug o sorteos especiales no anticipados).
 - Test sintético: serie escalera con resets a piso conocido → recupera flags exactos.
@@ -190,8 +212,10 @@ chi_square_uniformity(samples: pd.Series, n_categories: int) -> ChiSquareResult
 ```
 - Funciona idéntico para r1–r6 (concatenación de `draws_long.ball`) y para r7 (`r7_series`).
 
-**Aceptación:** sobre Melate real, p > 0.05; χ² dentro de `[gl − 2√(2·gl), gl + 2√(2·gl)]`.
-Gráfica frecuencias observadas vs banda esperada.
+**Aceptación:** el reporte SIEMPRE muestra `p_value` exacto y `stat`. Sobre Melate real,
+p > 0.05 esperado; χ² dentro de `[gl − 2√(2·gl), gl + 2√(2·gl)]` como sanity (≈95% del nulo).
+La banda no sustituye al p-valor; ambos van al reporte. Gráfica de frecuencias observadas
+vs banda esperada.
 
 **Tarea 2 — Corrección de comparaciones múltiples**
 ```python
@@ -219,21 +243,31 @@ con p > 0.05) con `n_sim ≥ 10_000`.
 
 ```python
 weight_walkforward(draws_wide: pd.DataFrame, *, window: int, breaks: int,
-                   null_sim: np.ndarray) -> BacktestResult
-# BacktestResult: hit_rate_weight, hit_rate_random, ci_95, p_value,
+                   range_: int, n_balls: int) -> BacktestResult
+# BacktestResult: hit_rate_weight, hit_rate_baseline_analytical,
+#                 baseline_ci_95, p_value_vs_baseline,
 #                 hits_per_draw_series, fig
 ```
 
 - Reproduce **exactamente** el algoritmo de `melate.pl:786-800` (suma ponderada por segmentos,
   nivel decreciente, más reciente pesa más).
-- Walk-forward: en cada sorteo `k`, usa solo `draws[:k]` para producir 6 "números probables";
-  compara contra `draws[k]`.
-- Baseline: misma función con selección uniforme aleatoria, vía `simulate_null`.
+- Walk-forward: en cada sorteo `k`, usa solo `draws[:k]` para producir `n_balls` "números
+  probables"; compara contra `draws[k]`.
+- **Baseline analítico (no Monte Carlo):** bajo selección uniforme, el número de aciertos
+  por sorteo es hipergeométrica con parámetros `(N=range_, K=n_balls, n=n_balls)`. La tasa
+  esperada de aciertos es `E[hits] = n_balls² / range_` (= 0.643 para Melate). El IC95 sobre
+  el agregado de `n_draws_evaluados` sorteos sale de la varianza analítica de la hipergeométrica.
+  Se evita Monte Carlo porque la distribución es conocida y cerrada; usar simulación aquí
+  sería ceremonia innecesaria.
+- Comparación: test binomial / proporciones del `hit_rate_weight` contra el `E[hits]`
+  analítico. Reportar `p_value_vs_baseline`.
 
 **Aceptación crítica (anti-bug, no opcional):**
 - `assert max(draw_idx_used) < k` en cada iteración (test explícito contra data leakage).
-- Tasa de acierto del `-weight` ∈ `[random_lower_ci, random_upper_ci]` con p > 0.05.
-- Si el backtest "gana" → el test debe fallar con mensaje:
+  Esta es la primera verificación que corre; si falla, ningún otro resultado se reporta.
+- `hit_rate_weight` ∈ `baseline_ci_95` y `p_value_vs_baseline > 0.05` (no rechazar igualdad
+  al azar).
+- Si el backtest "gana" significativamente → el test debe fallar con mensaje:
   *"probable data leakage, NO es hallazgo, auditar la ventana walk-forward"*.
 
 ---
@@ -241,23 +275,40 @@ weight_walkforward(draws_wide: pd.DataFrame, *, window: int, breaks: int,
 ### `behavior.py` — Tarea 5
 
 ```python
-rollover_excess(jackpot_df: pd.DataFrame, *, expected_p_jackpot: float,
-                n_players_per_draw: int | None = None) -> RolloverExcessResult
-# RolloverExcessResult: observed_rate, expected_poisson_rate, ratio,
-#                      p_value, ci_95, fig
+rollover_excess(
+    jackpot_df: pd.DataFrame,
+    *,
+    range_: int,
+    n_balls: int,
+    n_players_grid: list[int] | np.ndarray = (1_000_000, 5_000_000, 10_000_000,
+                                              25_000_000, 50_000_000),
+) -> RolloverExcessResult
+# RolloverExcessResult:
+#   observed_rollover_rate: float
+#   per_N: pd.DataFrame   # cols: N, expected_rate_poisson, ratio, p_value, ci_95
+#   fig                   # curva ratio vs N + banda de IC
 ```
 
-- `expected_p_jackpot = 1 / C(range, 6)` por boleto; combinado con `n_players_per_draw`
-  estimado o pasado como parámetro, produce la tasa esperada de rollovers bajo elección uniforme.
-- Test: tasa observada de rollovers (de F0.5) vs Poisson uniforme.
-- Reporta el ratio observado/esperado como **cota inferior** del efecto de selección consciente.
+- `p_jackpot_per_ticket = 1 / C(range_, n_balls)`.
+- Para cada `N` en `n_players_grid`: `expected_rollover_rate(N) = exp(-N * p_jackpot_per_ticket)`
+  (Poisson bajo elección uniforme).
+- `ratio(N) = observed_rate / expected_rollover_rate(N)`.
+- Test: razón de tasas / proporción observada vs esperada; p-value por bola de N.
+- **N tratado como nuisance parameter**: el reporte presenta el ratio para todo el grid de N,
+  no un número único. La conclusión se enuncia como *"incluso bajo el N más favorable al
+  null (el más alto del grid), el exceso de rollovers es ≥ X"*. Esto evita comprometerse
+  con un N específico que requeriría conocer el reglamento y la fracción de ventas que va
+  al pozo.
 
 **Aceptación:**
 - El output del reporte incluye literal: *"este número subestima el efecto real;
   una fracción desconocida de jugadores usa Quick Pick (selección automática), que es uniforme
   y atenúa el exceso de rollovers medible."*
-- Sobre Melate real, ratio > 1 esperado (cota inferior consistente con la literatura
-  internacional de *conscious selection*).
+- El output del reporte incluye literal: *"N (número de boletos vendidos por sorteo) se trata
+  como parámetro de molestia; el resultado se presenta sobre un rango plausible de N en vez
+  de fijar un valor único."*
+- Sobre Melate real, `ratio > 1` para todo el grid `n_players_grid` razonable (cota inferior
+  consistente con la literatura internacional de *conscious selection*).
 
 ---
 
@@ -295,15 +346,21 @@ Test rojo → implementación mínima → verde → refactor.
 
 **Fixtures (en `tests/conftest.py`):**
 - `tiny_db_path`: SQLite efímero (vía `tmp_path`) con esquema real y ~50 sorteos sintéticos
-  por producto. Permite tests rápidos sin depender de `~/.melate/melate.db`.
+  por producto. **Alcance acotado: solo lógica** (parsing, normalización de r7=`''`, validación
+  de rangos, edge cases del piso de BOLSA, walk-forward sin leakage). NO valida propiedades
+  estadísticas — 50 sorteos × 6 bolas tiene gl=55 con ruido enorme.
 - `real_db_path`: marca `pytest.mark.integration`, salta si no existe `~/.melate/melate.db`.
+  Aquí se validan las propiedades estadísticas que el spec espera (χ² no rechaza, backtest
+  ≈ azar, ratio de rollovers > 1).
 
 **Niveles:**
-1. **Unit** (rápidos, sin DB real) — todas las funciones puras contra fixtures sintéticas.
+1. **Unit** (rápidos, sin DB real) — funciones puras contra fixtures sintéticas. Verifican
+   lógica, no propiedades estadísticas.
 2. **Integration** (lentos, requieren DB poblada, `@pytest.mark.integration`) — validan
    que sobre datos reales los resultados caen donde el spec dice.
 3. **Anti-bug (críticos)** — asserts contra data leakage en backtest, contra detección espuria
-   de rollover, etc. Los que el spec identifica como "señales de bug, no de hallazgo".
+   de rollover, etc. Los que el spec identifica como "señales de bug, no de hallazgo". Estos
+   corren en ambos niveles (sintético y real).
 
 ---
 
@@ -322,21 +379,19 @@ parcial, esperar OK explícito.
 
 ---
 
-## 8. Deltas a aplicar al spec original (`melate-stats-spec.md`)
+## 8. Relación con el spec original (`melate-stats-spec.md`)
 
-Para que el spec refleje las decisiones tomadas aquí:
+Este design doc es **canónico para la v1**. El spec original queda como *vision document*
+del módulo completo (Tiers 1–4, todas las extensiones futuras).
 
-1. Añadir bloque "Decisiones cerradas para v1" en sección 1 (las 4 de §2 de este diseño).
-2. Reemplazar el árbol de carpetas propuesto por el de §3 de este diseño (con `tests/` explícito).
-3. F0: añadir contrato exacto de `load_draws` y dataclass `DrawData`.
-4. F0.5: añadir parámetros `eps=0.05`, `threshold=1.2` y columna `ambiguous`; criterio
-   cuantitativo `ambiguous < 5%`.
-5. Tarea 4: añadir el assert anti-leakage como criterio de aceptación.
-6. Tarea 5: convertir el caveat Quick Pick de párrafo a requisito de output.
-7. Recomendación de alcance: marcar como **decisión tomada**, no recomendación.
-8. Sección nueva con la tabla CP1–CP5.
-9. Sección nueva con la estrategia de tests unit/integration/anti-bug.
-10. Sección 5 (prompt inicial) / checklist: eliminar las dos preguntas ya decididas (r7, scraping).
+**Única acción a aplicar al spec original:** añadir al inicio una nota:
+
+> *"V1 se implementa según `docs/superpowers/specs/2026-05-28-melate-stats-design.md`,
+> que es canónico para lo efectivamente entregado. Este documento (`melate-stats-spec.md`)
+> mantiene la visión completa del módulo (incluyendo Tiers 6–13 fuera de v1)."*
+
+NO se intenta sincronizar los dos documentos. Si divergen, manda el design doc para v1.
+Los Tiers 6–13 del spec original quedan como deuda explicitada para futuras iteraciones.
 
 ---
 

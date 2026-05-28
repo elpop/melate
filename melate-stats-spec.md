@@ -1,5 +1,12 @@
 # Análisis estadístico de Melate — Spec para Claude Code
 
+> **⚠️ Estado del documento:** este es el *vision document* del módulo completo (Tiers 1–4,
+> tareas 1–13). La **v1 efectivamente entregada** se implementa según
+> [`docs/superpowers/specs/2026-05-28-melate-stats-design.md`](docs/superpowers/specs/2026-05-28-melate-stats-design.md),
+> que es **canónico** para lo que está siendo construido. Si los dos documentos divergen,
+> manda el design doc para v1. Las tareas que el design doc deja fuera de v1 (6–10, 13)
+> quedan documentadas aquí como deuda explicitada para futuras iteraciones.
+
 Proyecto base: [`elpop/melate`](https://github.com/elpop/melate) (Perl + SQLite).
 Este documento se escribió revisando el fork local `electroniccats/melate`; el código
 relevante (esquema, parsing del CSV, lógica de descarga) es idéntico al upstream.
