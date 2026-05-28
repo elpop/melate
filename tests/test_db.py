@@ -66,3 +66,53 @@ def test_draws_sorted_ascending_by_draw(tiny_db_path):
     data = load_draws("melate")
     draws = data.draws_wide["draw"].tolist()
     assert draws == sorted(draws)
+
+
+def test_load_draws_raises_on_duplicate_balls(tmp_path, monkeypatch):
+    """Inject a corrupt draw into a fresh tiny DB and check we catch it."""
+    import sqlite3
+    db = tmp_path / "corrupt.db"
+    conn = sqlite3.connect(db)
+    conn.executescript(
+        """
+        CREATE TABLE products (id integer, name text, range integer,
+            balls integer, additional integer, url text, filename text);
+        CREATE TABLE results (id INTEGER PRIMARY KEY, product_id INTEGER,
+            draw integer, date_time TEXT, r1 integer, r2 integer, r3 integer,
+            r4 integer, r5 integer, r6 integer, r7 integer, award integer);
+        """
+    )
+    conn.execute(
+        "INSERT INTO products VALUES (40,'Melate',56,6,1,'','Melate')"
+    )
+    # r1 == r2 → duplicate
+    conn.execute(
+        "INSERT INTO results(product_id,draw,date_time,r1,r2,r3,r4,r5,r6,r7,award)"
+        " VALUES (40, 1, '2024-01-01', 5, 5, 6, 7, 8, 9, 10, 30000000)"
+    )
+    conn.commit()
+    conn.close()
+    monkeypatch.setenv("MELATE_DB", str(db))
+    with pytest.raises(DataIntegrityError) as exc:
+        load_draws("melate")
+    assert exc.value.draw == 1
+
+
+@pytest.mark.integration
+def test_load_draws_real_db_matches_count(real_db_path, monkeypatch):
+    """N from load_draws must match SELECT COUNT(*) for every product."""
+    import sqlite3
+    monkeypatch.setenv("MELATE_DB", str(real_db_path))
+    conn = sqlite3.connect(real_db_path)
+    try:
+        for name, pid in [("melate", 40), ("revancha", 41),
+                          ("revanchita", 34), ("retro", 30)]:
+            expected = conn.execute(
+                "SELECT COUNT(*) FROM results WHERE product_id = ?", (pid,)
+            ).fetchone()[0]
+            data = load_draws(name)
+            assert len(data.draws_wide) == expected, (
+                f"{name}: load_draws gave {len(data.draws_wide)}, DB has {expected}"
+            )
+    finally:
+        conn.close()
