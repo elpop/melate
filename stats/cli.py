@@ -15,13 +15,15 @@ from stats.fairness import (
     chi_square_uniformity, bayesian_fairness, correct_pvalues, gaps_test,
 )
 from stats.multivariate import cooccurrence_test
+from stats.drift import pettitt_per_ball
 from stats.backtest import weight_walkforward
 from stats.rollover import derive_jackpot_won
 from stats.behavior import rollover_excess
 from stats.report import build_report
 
 
-ANALYSES = {"chi2", "bayes", "cooccurrence", "gaps", "backtest", "behavior", "all"}
+ANALYSES = {"chi2", "bayes", "cooccurrence", "gaps", "drift",
+            "backtest", "behavior", "all"}
 
 
 def _chi2_summary(res, *, scope: str) -> str:
@@ -163,6 +165,30 @@ def _run_gaps(data) -> dict:
     }
 
 
+def _run_drift(data) -> dict:
+    """Pettitt change-point per ball (tarea 10)."""
+    res = pettitt_per_ball(data.draws_wide, range_=data.range,
+                           n_balls=data.n_balls)
+    expected_at_nominal = 0.05 * data.range
+    return {
+        "title": "Temporal drift (Pettitt change-point, r1..r6)",
+        "summary": (
+            f"n_draws={res.n_draws}; Bonferroni threshold "
+            f"(α/range) = {res.bonferroni_threshold:.4f}\n"
+            f"Balls significant at α=0.05 (uncorrected): "
+            f"{res.n_significant_at_nominal_05}/{data.range} "
+            f"(expected by chance ≈ {expected_at_nominal:.0f})\n"
+            f"Balls significant at Bonferroni: "
+            f"**{res.n_significant_at_bonferroni}**"
+        ),
+        "figure": res.fig,
+        "expected_per_spec": (
+            "0 bolas sobreviven Bonferroni; sin change-points evidentes"
+        ),
+        "matches_expectation": res.n_significant_at_bonferroni == 0,
+    }
+
+
 def _run_backtest(data) -> dict:
     res = weight_walkforward(
         data.draws_wide, n_balls=data.n_balls, range_=data.range,
@@ -229,7 +255,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if "all" in requested:
-        requested = {"chi2", "bayes", "cooccurrence", "gaps", "backtest", "behavior"}
+        requested = {"chi2", "bayes", "cooccurrence", "gaps", "drift",
+                     "backtest", "behavior"}
 
     sections = []
     if "chi2" in requested:
@@ -243,6 +270,8 @@ def main(argv: list[str] | None = None) -> int:
         sections.append(_run_cooccurrence(data))
     if "gaps" in requested:
         sections.append(_run_gaps(data))
+    if "drift" in requested:
+        sections.append(_run_drift(data))
     if "backtest" in requested:
         sections.append(_run_backtest(data))
     if "behavior" in requested:
