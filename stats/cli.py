@@ -20,12 +20,14 @@ from stats.serial import serial_independence_per_ball
 from stats.backtest import weight_walkforward
 from stats.rollover import derive_jackpot_won
 from stats.behavior import rollover_excess, rollover_excess_annual
+from stats.hypotheses import low_number_bias_test, bolsa_dependence_test
 from stats.ingest import load_annual_winners, p_any_win_per_ticket
 from stats.report import build_report
 
 
 ANALYSES = {"chi2", "bayes", "cooccurrence", "gaps", "drift", "serial",
-            "backtest", "behavior", "behavior-annual", "all"}
+            "backtest", "behavior", "behavior-annual",
+            "low-number-bias", "bolsa-dependence", "all"}
 
 
 def _chi2_summary(res, *, scope: str) -> str:
@@ -191,6 +193,68 @@ def _run_drift(data) -> dict:
     }
 
 
+def _run_low_number_bias(data) -> dict:
+    """Hypothesis A1/C1: do "low" combos win more often? (date-driven popularity)"""
+    jackpot = derive_jackpot_won(data.draws_wide["award"])
+    res = low_number_bias_test(
+        data.draws_wide, jackpot,
+        range_=data.range, n_balls=data.n_balls, low_cutoff=31,
+    )
+    return {
+        "title": "Low-number bias (A1/C1: are low-number combos more popular?)",
+        "summary": (
+            f"low_cutoff = {res.low_cutoff} (date-like). "
+            f"χ²={res.chi2_stat:.2f}, dof={res.chi2_dof}, p={res.p_value:.4f}\n\n"
+            "Bajo selección consciente por fechas, sorteos cuyo combo ganador "
+            "tiene MÁS números ≤ 31 deberían tener mayor tasa de jackpot_won. "
+            f"{'NO se rechaza' if res.p_value > 0.05 else 'SE rechaza'} la "
+            "hipótesis nula de independencia."
+        ),
+        "figure": res.fig,
+        "expected_per_spec": (
+            "Hipótesis exploratoria. Sin predicción direccional. "
+            "Si p < 0.05 con tasa creciente en lowness → A1 confirmada."
+        ),
+        # This is exploratory — we don't fail on either outcome.
+        "matches_expectation": True,
+    }
+
+
+def _run_bolsa_dependence(data) -> dict:
+    """Hypothesis B1: does jackpot_won rate depend on BOLSA tercile?"""
+    jackpot = derive_jackpot_won(data.draws_wide["award"])
+    res = bolsa_dependence_test(
+        data.draws_wide, jackpot,
+        range_=data.range, n_balls=data.n_balls,
+    )
+    return {
+        "title": "BOLSA dependence (B1: does jackpot rate scale with prize size?)",
+        "summary": (
+            f"χ²={res.chi2_stat:.2f}, dof={res.chi2_dof}, p={res.p_value:.4f}\n\n"
+            f"Por tercil de BOLSA (en MXN, redondeado):\n"
+            + "\n".join(
+                f"- T{int(r['tercile'])} ({r['bolsa_lo']/1e6:.0f}M–"
+                f"{r['bolsa_hi']/1e6:.0f}M): n={int(r['n_draws'])}, "
+                f"jackpots={int(r['n_jackpots'])}, "
+                f"rate={r['jackpot_rate']*100:.2f}%"
+                for _, r in res.per_tercile.iterrows()
+            )
+            + "\n\n"
+            "Tasa creciente con BOLSA es esperada bajo cualquier modelo con "
+            "N (ventas) ∝ BOLSA. Saltos extremos entre tercil 1 y 2 sugieren "
+            "que el modelo anual de behavior (N constante) sobreestima el "
+            "expected rate en sorteos post-reset, exagerando el signal de "
+            "selección consciente."
+        ),
+        "figure": res.fig,
+        "expected_per_spec": (
+            "Rate creciente con BOLSA esperada (es N quien crece, no la "
+            "fairness del sorteo). p << 0.05 es la lectura normal."
+        ),
+        "matches_expectation": res.p_value < 0.05,
+    }
+
+
 def _run_behavior_annual(data) -> dict | None:
     """Annual rollover-excess with N calibrated from XLSX winner totals
     (tarea 13 (a) — medium-strength version of tarea 5).
@@ -350,7 +414,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if "all" in requested:
         requested = {"chi2", "bayes", "cooccurrence", "gaps", "drift", "serial",
-                     "backtest", "behavior", "behavior-annual"}
+                     "backtest", "behavior", "behavior-annual",
+                     "low-number-bias", "bolsa-dependence"}
 
     sections = []
     if "chi2" in requested:
@@ -376,6 +441,10 @@ def main(argv: list[str] | None = None) -> int:
         annual_section = _run_behavior_annual(data)
         if annual_section is not None:
             sections.append(annual_section)
+    if "low-number-bias" in requested:
+        sections.append(_run_low_number_bias(data))
+    if "bolsa-dependence" in requested:
+        sections.append(_run_bolsa_dependence(data))
 
     results = {"product_name": data.product_name, "sections": sections}
     out = build_report(results, args.output)
