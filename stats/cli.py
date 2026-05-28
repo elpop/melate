@@ -12,13 +12,14 @@ import pandas as pd
 
 from stats.db import load_draws
 from stats.fairness import chi_square_uniformity, bayesian_fairness, correct_pvalues
+from stats.multivariate import cooccurrence_test
 from stats.backtest import weight_walkforward
 from stats.rollover import derive_jackpot_won
 from stats.behavior import rollover_excess
 from stats.report import build_report
 
 
-ANALYSES = {"chi2", "bayes", "backtest", "behavior", "all"}
+ANALYSES = {"chi2", "bayes", "cooccurrence", "backtest", "behavior", "all"}
 
 
 def _chi2_summary(res, *, scope: str) -> str:
@@ -110,6 +111,32 @@ def _run_bayes(data) -> dict:
     }
 
 
+def _run_cooccurrence(data) -> dict:
+    """Pairwise co-occurrence vs multivariate hypergeometric (tarea 7)."""
+    res = cooccurrence_test(
+        data.draws_wide, range_=data.range, n_balls=data.n_balls,
+    )
+    n_pairs = data.range * (data.range - 1) // 2
+    expected_at_nominal = 0.05 * n_pairs
+    return {
+        "title": "Pairwise co-occurrence (r1..r6 vs multivariate hypergeometric)",
+        "summary": (
+            f"n_draws={res.n_draws}, expected/pair={res.expected_per_pair:.1f}, "
+            f"max|z|={res.max_abs_z:.2f}\n"
+            f"Pairs over |z|>1.96 (nominal 5%): "
+            f"{res.n_extreme_at_nominal_05}/{n_pairs} "
+            f"(expected by chance ≈ {expected_at_nominal:.0f})\n"
+            f"Pairs over Bonferroni threshold ({res.bonferroni_threshold:.2f}σ): "
+            f"**{res.n_extreme_at_bonferroni}**"
+        ),
+        "figure": res.fig,
+        "expected_per_spec": (
+            "0 pairs sobreviven Bonferroni; conteo nominal cerca de 5% del total"
+        ),
+        "matches_expectation": res.n_extreme_at_bonferroni == 0,
+    }
+
+
 def _run_backtest(data) -> dict:
     res = weight_walkforward(
         data.draws_wide, n_balls=data.n_balls, range_=data.range,
@@ -176,7 +203,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if "all" in requested:
-        requested = {"chi2", "bayes", "backtest", "behavior"}
+        requested = {"chi2", "bayes", "cooccurrence", "backtest", "behavior"}
 
     sections = []
     if "chi2" in requested:
@@ -186,6 +213,8 @@ def main(argv: list[str] | None = None) -> int:
     _apply_bonferroni_to_chi2_sections(sections)
     if "bayes" in requested:
         sections.append(_run_bayes(data))
+    if "cooccurrence" in requested:
+        sections.append(_run_cooccurrence(data))
     if "backtest" in requested:
         sections.append(_run_backtest(data))
     if "behavior" in requested:
