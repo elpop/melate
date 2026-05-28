@@ -21,17 +21,20 @@ PRODUCT_IDS: dict[str, int] = {
 }
 
 
-# Per-product start of the current ball-range format. Earlier draws used
-# a smaller range (Melate: 1-39 in 1984, 1-44 in 1993, etc.) and mixing
-# eras in a chi-square test artificially rejects uniformity. Verified
-# against the DB at 2026-05-28:
-#   Melate (40):    range grew 39→44→47→50→51→56 between 1984 and 2007.
-#   Revancha (41):  same migration, both products went 6/56 in 2007.
+# Per-product start of the homogeneous v1-analysis era.
+#
+# Verified against the real DB at 2026-05-28:
+#   Melate (40):    ball range grew 39→44→47→50→51→56 between 1984 and
+#                   2007. The BOLSA floor was 12M during 2007 and
+#                   stabilized at 30M from 2008 onwards. We start at
+#                   2008-01-01 so chi-square AND rollover analyses both
+#                   run on a single regime (range=56, floor=30M).
+#   Revancha (41):  same migration as Melate.
 #   Revanchita (34) and Retro (30) started after the migration and have
-#   been at their current range throughout.
+#                   been at their current range/floor throughout.
 DEFAULT_SINCE: dict[str, str | None] = {
-    "melate":     "2007-01-01",
-    "revancha":   "2007-01-01",
+    "melate":     "2008-01-01",
+    "revancha":   "2008-01-01",
     "revanchita": None,
     "retro":      None,
 }
