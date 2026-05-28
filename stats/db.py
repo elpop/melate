@@ -63,9 +63,48 @@ def load_draws(product: str) -> DrawData:
     finally:
         conn.close()
 
-    empty_wide = pd.DataFrame(columns=["draw", "date", "r1", "r2", "r3", "r4",
-                                       "r5", "r6", "r7", "award"])
-    empty_long = pd.DataFrame(columns=["draw", "date", "position", "ball"])
+    # Load results
+    query = (
+        "SELECT draw, date_time, r1, r2, r3, r4, r5, r6, r7, award "
+        "FROM results WHERE product_id = ? ORDER BY draw ASC"
+    )
+    conn = sqlite3.connect(_db_path())
+    try:
+        raw = pd.read_sql_query(query, conn, params=(product_id,))
+    finally:
+        conn.close()
+
+    # Normalize r7: SQLite stores '' for Revancha/Revanchita (melate.pl:366);
+    # coerce to nullable Int64 so NA stays NA.
+    raw["r7"] = pd.to_numeric(raw["r7"], errors="coerce").astype("Int64")
+
+    # date parsed to datetime, then renamed.
+    raw["date_time"] = pd.to_datetime(raw["date_time"], format="%Y-%m-%d")
+    raw = raw.rename(columns={"date_time": "date"})
+
+    draws_wide = raw[["draw", "date", "r1", "r2", "r3", "r4", "r5", "r6",
+                      "r7", "award"]].reset_index(drop=True)
+
+    # Validate r1..r6.
+    ball_cols = [f"r{i}" for i in range(1, n_balls + 1)]
+    for _, row in draws_wide.iterrows():
+        balls = [row[c] for c in ball_cols]
+        if len(set(balls)) != n_balls:
+            raise DataIntegrityError(row["draw"], "duplicate balls in r1..r6")
+        if not all(1 <= b <= range_ for b in balls):
+            raise DataIntegrityError(row["draw"], f"ball out of [1, {range_}]")
+
+    # Build long format from r1..r6 only.
+    long = draws_wide[["draw", "date"] + ball_cols].melt(
+        id_vars=["draw", "date"], value_vars=ball_cols,
+        var_name="position", value_name="ball",
+    ).sort_values(["draw", "position"]).reset_index(drop=True)
+
+    # r7_series only if has_additional.
+    if bool(additional):
+        r7_series = draws_wide.set_index("draw")["r7"]
+    else:
+        r7_series = None
 
     return DrawData(
         product_name=name,
@@ -73,7 +112,7 @@ def load_draws(product: str) -> DrawData:
         range=range_,
         n_balls=n_balls,
         has_additional=bool(additional),
-        draws_wide=empty_wide,
-        draws_long=empty_long,
-        r7_series=None,
+        draws_wide=draws_wide,
+        draws_long=long,
+        r7_series=r7_series,
     )
