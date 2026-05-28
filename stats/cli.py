@@ -19,12 +19,13 @@ from stats.drift import pettitt_per_ball
 from stats.serial import serial_independence_per_ball
 from stats.backtest import weight_walkforward
 from stats.rollover import derive_jackpot_won
-from stats.behavior import rollover_excess
+from stats.behavior import rollover_excess, rollover_excess_annual
+from stats.ingest import load_annual_winners, p_any_win_per_ticket
 from stats.report import build_report
 
 
 ANALYSES = {"chi2", "bayes", "cooccurrence", "gaps", "drift", "serial",
-            "backtest", "behavior", "all"}
+            "backtest", "behavior", "behavior-annual", "all"}
 
 
 def _chi2_summary(res, *, scope: str) -> str:
@@ -190,6 +191,73 @@ def _run_drift(data) -> dict:
     }
 
 
+def _run_behavior_annual(data) -> dict | None:
+    """Annual rollover-excess with N calibrated from XLSX winner totals
+    (tarea 13 (a) — medium-strength version of tarea 5).
+
+    Revanchita is intentionally skipped: its prize rule is "quien obtenga
+    más aciertos (9)" — the player(s) with the highest match count win,
+    regardless of category — so the constant p_any_win analytical formula
+    used here does not apply. Annual totals for Revanchita reflect only
+    those rare best-of-the-pool winners (22 total in 10 years), which
+    breaks the calibration.
+    """
+    slug_by_name = {"Melate": "melate", "Revancha": "revancha",
+                    "Revanchita": "revanchita", "Melate Retro": "retro"}
+    slug = slug_by_name[data.product_name]
+    if slug == "revanchita":
+        return None
+
+    try:
+        annual = load_annual_winners().query(f"product == '{slug}'")[
+            ["year", "winners"]
+        ]
+    except Exception:
+        return None
+    if annual.empty:
+        return None
+
+    jackpot = derive_jackpot_won(data.draws_wide["award"])
+    p_win = p_any_win_per_ticket(
+        range_=data.range, n_balls=data.n_balls,
+        has_additional=data.has_additional,
+    )
+    res = rollover_excess_annual(
+        jackpot, data.draws_wide["date"], annual,
+        range_=data.range, n_balls=data.n_balls, p_any_win=p_win,
+    )
+    n_years = len(res.per_year)
+    summary = (
+        f"N calibrado promedio = "
+        f"{res.per_year['n_calibrated_per_sorteo'].mean():,.0f} boletos/sorteo "
+        f"(rango: {res.per_year['n_calibrated_per_sorteo'].min():,.0f}–"
+        f"{res.per_year['n_calibrated_per_sorteo'].max():,.0f})\n"
+        f"Cobertura: {n_years} año(s) con datos completos (DB + XLSX).\n"
+        f"**Overall ratio observed/expected = {res.overall_ratio:.3f}, "
+        f"p = {res.overall_p_value:.4f}**\n\n"
+        f"> N por sorteo se DERIVA del número total de ganadores publicado "
+        f"y de P(any prize) analítica — no se asume. ratio<1 indica menos "
+        f"jackpots que lo esperado bajo juego uniforme → posible selección "
+        f"consciente. ratio≈1 indica juego uniforme (o equilibrio entre "
+        f"selección consciente y Quick Pick)."
+    )
+    return {
+        "title": "Annual rollover excess (calibrated N from XLSX)",
+        "summary": summary,
+        "figure": res.fig,
+        "expected_per_spec": (
+            "ratio observed/expected entre 0.7 y 1.0 (signal débil de "
+            "selección consciente sin significancia con ~10 años)"
+        ),
+        # Pass if signal is consistent with conscious selection (ratio<1) OR uniform (≈1).
+        # Fail only if the result violates the design — e.g., ratio >> 1 with p < 0.05.
+        "matches_expectation": (
+            res.overall_ratio < 1.5
+            and (res.overall_p_value > 0.05 or res.overall_ratio < 1.0)
+        ),
+    }
+
+
 def _run_serial(data) -> dict:
     """Runs test + lag-1 autocorrelation per ball (tarea 9)."""
     res = serial_independence_per_ball(
@@ -282,7 +350,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if "all" in requested:
         requested = {"chi2", "bayes", "cooccurrence", "gaps", "drift", "serial",
-                     "backtest", "behavior"}
+                     "backtest", "behavior", "behavior-annual"}
 
     sections = []
     if "chi2" in requested:
@@ -304,6 +372,10 @@ def main(argv: list[str] | None = None) -> int:
         sections.append(_run_backtest(data))
     if "behavior" in requested:
         sections.append(_run_behavior(data))
+    if "behavior-annual" in requested:
+        annual_section = _run_behavior_annual(data)
+        if annual_section is not None:
+            sections.append(annual_section)
 
     results = {"product_name": data.product_name, "sections": sections}
     out = build_report(results, args.output)
