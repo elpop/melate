@@ -5,6 +5,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+import matplotlib.pyplot as plt
+
 
 def _slug(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
@@ -37,6 +39,7 @@ def build_report(results: dict[str, Any], output_dir: Path) -> Path:
         slug = _slug(title)
         fig_path = figs_dir / f"{slug}.png"
         s["figure"].savefig(fig_path, dpi=120)
+        plt.close(s["figure"])
         lines.append(f"## {title}")
         lines.append("")
         lines.append(s["summary"])

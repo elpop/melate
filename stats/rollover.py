@@ -66,9 +66,18 @@ def derive_jackpot_won(
     ambiguous = pd.Series([False] * n, dtype=bool)
 
     for k in range(n - 1):
-        next_low = award.iloc[k + 1] <= floor * (1 + eps)
-        curr_high = award.iloc[k] >= floor * threshold
-        curr_low = award.iloc[k] <= floor * (1 + eps)
+        curr_val = award.iloc[k]
+        next_val = award.iloc[k + 1]
+        # award == 0 in the real CSV means missing data (no prize recorded for
+        # that draw), not a literal zero peso reset. Either value missing →
+        # we cannot judge → mark ambiguous, do not count as a win.
+        if curr_val == 0 or next_val == 0:
+            jackpot.iloc[k] = False
+            ambiguous.iloc[k] = True
+            continue
+        next_low = next_val <= floor * (1 + eps)
+        curr_high = curr_val >= floor * threshold
+        curr_low = curr_val <= floor * (1 + eps)
         if next_low and curr_high:
             jackpot.iloc[k] = True
         elif next_low and curr_low:

@@ -70,6 +70,29 @@ def test_derive_jackpot_won_returns_expected_columns():
                                "ambiguous", "floor_estimate"}
 
 
+def test_derive_jackpot_won_treats_zero_award_as_missing_not_reset():
+    """Real Melate draw 2233: award sequence 190M, 0, 213M. award=0 is
+    missing data (the prize was not recorded), NOT a reset to floor.
+    Must be flagged as ambiguous, not as a win."""
+    # k=2 corresponds to the 0 → it's the "next" of k=1, so k=1's decision
+    # is about transitioning from 190M to 0.
+    awards = pd.Series([100_000_000, 190_000_000, 0, 213_000_000, 230_000_000])
+    df = derive_jackpot_won(awards)
+    # k=1 must NOT be marked as jackpot_won (next is missing data, not a reset)
+    assert df.loc[1, "jackpot_won"] != True
+    # And it must be flagged as ambiguous so the operator sees it
+    assert df.loc[1, "ambiguous"] == True
+
+
+def test_derive_jackpot_won_does_not_use_zero_as_award_curr():
+    """If award[k] itself is 0 (missing), neither True nor False is a
+    defensible call — mark ambiguous."""
+    awards = pd.Series([100_000_000, 0, 30_000_000, 35_000_000])
+    df = derive_jackpot_won(awards)
+    assert df.loc[1, "ambiguous"] == True
+    assert df.loc[1, "jackpot_won"] != True
+
+
 from stats.db import load_draws
 
 

@@ -77,3 +77,47 @@ def test_cli_chi2_for_product_without_additional_skips_r7(
     body = (out / "report.md").read_text()
     assert body.count("## Chi-square goodness-of-fit") == 1
     assert "r7" not in body
+
+
+def test_cli_chi2_summary_includes_sanity_band(tiny_db_path, tmp_path, monkeypatch):
+    """Per design §5, the χ² report must include the sanity band, not just p."""
+    monkeypatch.setenv("MELATE_DB", str(tiny_db_path))
+    out = tmp_path / "out"
+    subprocess.run(
+        [sys.executable, "-m", "stats",
+         "--product", "revanchita",
+         "--analyses", "chi2",
+         "--output", str(out)],
+        capture_output=True, text=True, check=False,
+    )
+    body = (out / "report.md").read_text()
+    # Sanity band string must appear, with both bounds
+    assert "sanity band" in body.lower() or "banda" in body.lower()
+    # The band for gl=55 is [34.0, 76.0] (gl ± 2·sqrt(2·gl))
+    # Just verify the substrings; exact values may differ if dof shifts.
+    import re
+    assert re.search(r"\d+\.\d.*?\d+\.\d", body), \
+        "expected numeric band bounds in chi² summary"
+
+
+def test_cli_chi2_applies_bonferroni_when_two_sections(
+    tiny_db_path, tmp_path, monkeypatch
+):
+    """With ≥2 χ² in the report, Bonferroni correction must be reported and
+    must drive matches_expectation. Otherwise we'd flag false positives."""
+    monkeypatch.setenv("MELATE_DB", str(tiny_db_path))
+    out = tmp_path / "out"
+    subprocess.run(
+        [sys.executable, "-m", "stats",
+         "--product", "melate",
+         "--analyses", "chi2",
+         "--output", str(out)],
+        capture_output=True, text=True, check=False,
+    )
+    body = (out / "report.md").read_text()
+    # Both χ² sections present
+    assert body.count("## Chi-square goodness-of-fit") == 2
+    # Bonferroni correction mentioned
+    assert "Bonferroni" in body or "bonferroni" in body
+    # The reporting must include the corrected p (i.e. NOT just raw p)
+    assert "corrected" in body.lower()

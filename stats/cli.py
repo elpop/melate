@@ -8,25 +8,42 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 
+import pandas as pd
+
 from stats.db import load_draws
-from stats.fairness import chi_square_uniformity, bayesian_fairness
+from stats.fairness import chi_square_uniformity, bayesian_fairness, correct_pvalues
 from stats.backtest import weight_walkforward
 from stats.rollover import derive_jackpot_won
 from stats.behavior import rollover_excess
 from stats.report import build_report
 
 
-ANALYSES = {"chi2", "bayes", "backtest", "rollover", "behavior", "all"}
+ANALYSES = {"chi2", "bayes", "backtest", "behavior", "all"}
+
+
+def _chi2_summary(res, *, scope: str) -> str:
+    """Build the summary string for a χ² section, including the sanity band
+    [gl − 2·√(2·gl), gl + 2·√(2·gl)] per design §5."""
+    band_lo = res.dof - 2 * (2 * res.dof) ** 0.5
+    band_hi = res.dof + 2 * (2 * res.dof) ** 0.5
+    within = band_lo <= res.stat <= band_hi
+    return (
+        f"stat={res.stat:.2f}, dof={res.dof}, p={res.p_value:.4f}; "
+        f"sanity band [{band_lo:.1f}, {band_hi:.1f}] "
+        f"({'within' if within else 'OUTSIDE'} → {scope})"
+    )
 
 
 def _run_chi2(data) -> dict:
     res = chi_square_uniformity(data.draws_long["ball"], data.range)
     return {
         "title": "Chi-square goodness-of-fit (r1..r6)",
-        "summary": f"stat={res.stat:.2f}, dof={res.dof}, p={res.p_value:.4f}",
+        "summary": _chi2_summary(res, scope="r1..r6"),
         "figure": res.fig,
         "expected_per_spec": "p > 0.05 (no rechazar uniformidad)",
         "matches_expectation": res.p_value > 0.05,
+        "_kind": "chi2",
+        "_p_raw": res.p_value,
     }
 
 
@@ -40,11 +57,35 @@ def _run_chi2_r7(data) -> dict:
     res = chi_square_uniformity(samples, data.range)
     return {
         "title": "Chi-square goodness-of-fit (r7 additional ball)",
-        "summary": f"stat={res.stat:.2f}, dof={res.dof}, p={res.p_value:.4f}",
+        "summary": _chi2_summary(res, scope="r7"),
         "figure": res.fig,
         "expected_per_spec": "p > 0.05 (la bola adicional debe ser uniforme)",
         "matches_expectation": res.p_value > 0.05,
+        "_kind": "chi2",
+        "_p_raw": res.p_value,
     }
+
+
+def _apply_bonferroni_to_chi2_sections(sections: list[dict]) -> None:
+    """When ≥2 χ² sections are present in the report, apply Bonferroni
+    correction across them and overwrite each section's match decision
+    based on the corrected p-value. Per spec §5 / tarea 2 — transversal."""
+    chi2_sections = [s for s in sections if s.get("_kind") == "chi2"]
+    if len(chi2_sections) < 2:
+        return
+    pvals = pd.Series([s["_p_raw"] for s in chi2_sections])
+    corrected = correct_pvalues(pvals, method="bonferroni")
+    threshold = 0.05 / len(chi2_sections)
+    for i, s in enumerate(chi2_sections):
+        corr_p = float(corrected["pval_corrected"].iloc[i])
+        significant = bool(corrected["significant_at_05"].iloc[i])
+        s["summary"] += (
+            f"\n\n**Bonferroni** (m={len(chi2_sections)}): "
+            f"corrected p = {corr_p:.4f} "
+            f"(threshold α/m = {threshold:.4f}); "
+            f"{'STILL significant' if significant else 'NOT significant'} after correction"
+        )
+        s["matches_expectation"] = not significant
 
 
 def _run_bayes(data) -> dict:
@@ -94,7 +135,7 @@ def _run_behavior(data) -> dict:
     )
     largest = res.per_N.iloc[-1]
     summary = (f"observed_rate={res.observed_rollover_rate:.3f}; "
-               f"at largest N={largest['N']:,}: ratio={largest['ratio']:.3f}")
+               f"at largest N={int(largest['N']):,}: ratio={largest['ratio']:.3f}")
     summary += ("\n\n> N (número de boletos vendidos por sorteo) se trata como "
                 "parámetro de molestia; el resultado se presenta sobre un rango "
                 "plausible de N en vez de fijar un valor único.\n\n"
@@ -142,6 +183,7 @@ def main(argv: list[str] | None = None) -> int:
         sections.append(_run_chi2(data))
         if data.has_additional:
             sections.append(_run_chi2_r7(data))
+    _apply_bonferroni_to_chi2_sections(sections)
     if "bayes" in requested:
         sections.append(_run_bayes(data))
     if "backtest" in requested:
