@@ -84,3 +84,68 @@ def test_walk_forward_raises_on_duplicate_draws():
     with pytest.raises(DataLeakageError):
         walk_forward_hits(wide, n_balls=6, range_=56,
                           window=10, breaks=2, start_at=2)
+
+
+from stats.backtest import weight_walkforward, BacktestResult
+
+
+def test_weight_walkforward_matches_analytical_baseline_on_random_seed_history():
+    """A history of uniformly random draws should match E[hits] = n_balls²/range_.
+
+    Use p_value > 0.01 (not CI containment) to avoid a ~5% false-fail rate.
+    """
+    rng = np.random.default_rng(123)
+    n_draws = 300
+    rows = [rng.choice(56, size=6, replace=False) + 1 for _ in range(n_draws)]
+    wide = pd.DataFrame(rows, columns=[f"r{i}" for i in range(1, 7)]).assign(
+        draw=range(1, n_draws + 1), date=pd.Timestamp("2024-01-01"),
+        r7=pd.NA, award=30_000_000,
+    )
+    result = weight_walkforward(
+        wide, n_balls=6, range_=56, window=60, breaks=10, start_at=61
+    )
+    assert isinstance(result, BacktestResult)
+    expected_rate = 6 * 6 / 56  # ≈ 0.643
+    assert pytest.approx(result.hit_rate_baseline_analytical, rel=1e-9) == expected_rate
+    # On uniform random data the predictor should not reject the null.
+    # Use p > 0.01 (not CI containment) to avoid a ~5% false-fail rate.
+    assert result.p_value_vs_baseline > 0.01, (
+        f"weight rate {result.hit_rate_weight:.3f} unexpectedly rejects null "
+        f"on uniform data (p={result.p_value_vs_baseline}); seed may need tuning"
+    )
+
+
+def test_weight_walkforward_flags_significant_win_as_likely_bug():
+    """If weight perfectly predicts (leakage simulation), p must be tiny."""
+    # Construct a sequence where draws repeat exactly → weight will always predict perfectly.
+    rows = [[1, 2, 3, 4, 5, 6]] * 100
+    wide = pd.DataFrame(rows, columns=[f"r{i}" for i in range(1, 7)]).assign(
+        draw=range(1, 101), date=pd.Timestamp("2024-01-01"),
+        r7=pd.NA, award=30_000_000,
+    )
+    result = weight_walkforward(wide, n_balls=6, range_=56, window=20,
+                                breaks=5, start_at=21)
+    # weight will hit all 6/6 every draw → mean hits per draw ≈ 6.0
+    assert result.hit_rate_weight > 5.99
+    assert result.p_value_vs_baseline < 1e-6
+
+
+from stats.db import load_draws
+
+
+@pytest.mark.integration
+def test_weight_walkforward_melate_real_does_not_beat_random(real_db_path, monkeypatch):
+    monkeypatch.setenv("MELATE_DB", str(real_db_path))
+    data = load_draws("melate")
+    result = weight_walkforward(
+        data.draws_wide, n_balls=data.n_balls, range_=data.range,
+        window=60, breaks=10, start_at=500,  # skip the warm-up
+    )
+    print(f"\nMelate -weight backtest: rate={result.hit_rate_weight:.3f}, "
+          f"baseline={result.hit_rate_baseline_analytical:.3f}, "
+          f"p={result.p_value_vs_baseline:.4f}")
+    # Expected per design: weight ≈ baseline, p > 0.05
+    assert result.p_value_vs_baseline > 0.01, (
+        "weight backtest 'beats' random — design §5 anti-bug rule: "
+        "probable data leakage, NOT a finding"
+    )
