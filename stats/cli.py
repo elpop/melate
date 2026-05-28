@@ -30,6 +30,23 @@ def _run_chi2(data) -> dict:
     }
 
 
+def _run_chi2_r7(data) -> dict:
+    """χ² over the additional ball r7 (only Melate id=40 and Retro id=30).
+
+    Analyzed separately from r1..r6 because r7 is drawn from a potentially
+    distinct mechanism — mixing the two would muddy a sane fairness test.
+    """
+    samples = data.r7_series.dropna().astype("int64")
+    res = chi_square_uniformity(samples, data.range)
+    return {
+        "title": "Chi-square goodness-of-fit (r7 additional ball)",
+        "summary": f"stat={res.stat:.2f}, dof={res.dof}, p={res.p_value:.4f}",
+        "figure": res.fig,
+        "expected_per_spec": "p > 0.05 (la bola adicional debe ser uniforme)",
+        "matches_expectation": res.p_value > 0.05,
+    }
+
+
 def _run_backtest(data) -> dict:
     res = weight_walkforward(
         data.draws_wide, n_balls=data.n_balls, range_=data.range,
@@ -101,6 +118,8 @@ def main(argv: list[str] | None = None) -> int:
     sections = []
     if "chi2" in requested:
         sections.append(_run_chi2(data))
+        if data.has_additional:
+            sections.append(_run_chi2_r7(data))
     if "backtest" in requested:
         sections.append(_run_backtest(data))
     if "behavior" in requested:

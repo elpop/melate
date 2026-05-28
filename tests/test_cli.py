@@ -37,3 +37,43 @@ def test_cli_unknown_product_exits_nonzero(tiny_db_path, tmp_path, monkeypatch):
     )
     assert result.returncode != 0
     assert "unknown product" in result.stderr.lower() or "powerball" in result.stderr
+
+
+def test_cli_chi2_for_product_with_additional_includes_r7_section(
+    tiny_db_path, tmp_path, monkeypatch
+):
+    """Melate (has_additional=True) must get a chi² section for r7 in addition to r1..r6."""
+    monkeypatch.setenv("MELATE_DB", str(tiny_db_path))
+    out = tmp_path / "out"
+    result = subprocess.run(
+        [sys.executable, "-m", "stats",
+         "--product", "melate",
+         "--analyses", "chi2",
+         "--output", str(out)],
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    body = (out / "report.md").read_text()
+    # Two H2 chi-square sections: r1..r6 main + r7 additional
+    assert body.count("## Chi-square goodness-of-fit") == 2
+    assert "r1..r6" in body
+    assert "r7" in body
+
+
+def test_cli_chi2_for_product_without_additional_skips_r7(
+    tiny_db_path, tmp_path, monkeypatch
+):
+    """Revancha (has_additional=False) gets only the r1..r6 chi² section."""
+    monkeypatch.setenv("MELATE_DB", str(tiny_db_path))
+    out = tmp_path / "out"
+    result = subprocess.run(
+        [sys.executable, "-m", "stats",
+         "--product", "revancha",
+         "--analyses", "chi2",
+         "--output", str(out)],
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    body = (out / "report.md").read_text()
+    assert body.count("## Chi-square goodness-of-fit") == 1
+    assert "r7" not in body
