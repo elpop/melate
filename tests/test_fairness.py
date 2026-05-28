@@ -194,3 +194,78 @@ def test_bayesian_fairness_melate_real_favors_fair_model(real_db_path, monkeypat
     assert result.log_bayes_factor_fair_vs_dirichlet > 0
     # Most CIs should contain uniform (95% nominally; allow ≥ 85% in real data).
     assert result.contains_uniform_count >= int(0.85 * data.range)
+
+
+from stats.fairness import gaps_test, GapsResult
+
+
+def _wide_uniform(n_draws: int, range_: int, n_balls: int = 6,
+                  seed: int = 0) -> pd.DataFrame:
+    rng = np.random.default_rng(seed)
+    rows = [rng.choice(range_, size=n_balls, replace=False) + 1
+            for _ in range(n_draws)]
+    return pd.DataFrame(rows, columns=[f"r{i}" for i in range(1, n_balls + 1)]).assign(
+        draw=range(1, n_draws + 1), date=pd.Timestamp("2024-01-01"),
+        r7=pd.NA, award=30_000_000,
+    )
+
+
+def test_gaps_test_returns_named_result_with_per_ball_pvalues():
+    wide = _wide_uniform(n_draws=1000, range_=56)
+    result = gaps_test(wide, range_=56, n_balls=6)
+    assert isinstance(result, GapsResult)
+    assert len(result.per_ball) == 56
+    assert {"ball", "n_gaps", "mean_gap", "chi2_stat", "p_value",
+            "significant_at_bonferroni"} <= set(result.per_ball.columns)
+
+
+def test_gaps_test_uniform_data_no_ball_survives_bonferroni():
+    """Under genuine uniform draws, K-S on the per-ball gap distribution
+    should not reject geometric for any ball after Bonferroni."""
+    wide = _wide_uniform(n_draws=2000, range_=56, seed=11)
+    result = gaps_test(wide, range_=56, n_balls=6)
+    assert result.n_significant_at_bonferroni == 0
+    # Mean gap should be close to 1/p = range/n_balls = 56/6 ≈ 9.33
+    assert 8.5 <= result.per_ball["mean_gap"].mean() <= 10.0
+
+
+def test_gaps_test_clustered_ball_shows_atypical_gaps():
+    """Construct a sequence where ball 13 ONLY appears in alternating
+    clumps (gaps of 1, then long stretches of absence). The gap CDF for
+    ball 13 must reject geometric strongly."""
+    rng = np.random.default_rng(99)
+    n_draws = 800
+    rows = []
+    for k in range(n_draws):
+        # ball 13 appears in pairs of draws every 50 draws → gap of 1 alternating
+        # with gap of ~50.
+        if (k // 25) % 2 == 0 and (k % 25) < 2:
+            forced = [13]
+        else:
+            forced = []
+        others = [b for b in rng.permutation(56) + 1
+                  if b not in forced][:6 - len(forced)]
+        rng.shuffle(others)
+        balls = forced + others
+        rows.append(balls)
+    wide = pd.DataFrame(rows, columns=[f"r{i}" for i in range(1, 7)]).assign(
+        draw=range(1, n_draws + 1), date=pd.Timestamp("2024-01-01"),
+        r7=pd.NA, award=30_000_000,
+    )
+    result = gaps_test(wide, range_=56, n_balls=6)
+    # ball 13 must be among the Bonferroni-significant balls
+    row = result.per_ball[result.per_ball["ball"] == 13].iloc[0]
+    assert bool(row["significant_at_bonferroni"]) is True
+
+
+@pytest.mark.integration
+def test_gaps_test_melate_real_no_ball_survives_bonferroni(
+    real_db_path, monkeypatch
+):
+    monkeypatch.setenv("MELATE_DB", str(real_db_path))
+    data = load_draws("melate")
+    result = gaps_test(data.draws_wide, range_=data.range, n_balls=data.n_balls)
+    print(f"\nMelate gaps: significant at α=0.05 (uncorrected): "
+          f"{result.n_significant_at_nominal_05}/{data.range}; "
+          f"at Bonferroni: {result.n_significant_at_bonferroni}")
+    assert result.n_significant_at_bonferroni == 0

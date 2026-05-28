@@ -179,3 +179,152 @@ def bayesian_fairness(
         log_bayes_factor_fair_vs_dirichlet=log_bf,
         fig=fig,
     )
+
+
+@dataclass
+class GapsResult:
+    """Per-ball gap-distribution K-S test against geometric(p=n_balls/range_).
+
+    A "gap" is the number of draws between consecutive appearances of the
+    same ball. Under fair independent draws the gap is geometric(p) with
+    support {1, 2, 3, ...}. K-S rejects → that ball's gap distribution
+    is not geometric → independence between draws is violated for that ball.
+    """
+    n_draws: int
+    p_appear_per_draw: float            # n_balls / range_
+    per_ball: pd.DataFrame              # ball, n_gaps, mean_gap, ks_stat, p_value, significant_at_bonferroni
+    n_significant_at_nominal_05: int
+    n_significant_at_bonferroni: int
+    bonferroni_threshold: float
+    fig: Figure
+
+
+def _chi2_gaps_vs_geometric(gaps: np.ndarray, p: float) -> tuple[float, int, float]:
+    """Chi² goodness-of-fit for an array of observed gaps against geom(p).
+
+    The K-S test is inappropriate for discrete distributions — scipy's
+    `kstest` p-values are computed against the continuous Kolmogorov
+    distribution and are systematically biased toward rejection for
+    geometric data. Chi² on binned counts is the standard alternative
+    and is what the spec really wants when it says "K-S vs geometric".
+
+    Merge the upper tail so every expected count is >= 5 (standard
+    chi² recommendation). Returns (stat, dof, p_value).
+    """
+    from scipy.stats import chi2 as chi2_dist, geom
+
+    n = len(gaps)
+    if n < 10:
+        return float("nan"), 0, 1.0
+
+    # Find K such that the tail bin [K, ∞) has expected ≥ 5.
+    K = 1
+    while n * (1 - geom(p).cdf(K - 1)) >= 5:
+        K += 1
+    # Now bins are: 1, 2, ..., K-1, [K, ∞). Need K >= 3 for at least 2 dof.
+    if K < 3:
+        return float("nan"), 0, 1.0
+
+    observed = np.zeros(K, dtype=int)
+    for g in gaps:
+        if g >= K:
+            observed[K - 1] += 1
+        else:
+            observed[int(g) - 1] += 1
+    expected = np.empty(K, dtype=float)
+    for k in range(1, K):
+        expected[k - 1] = n * geom(p).pmf(k)
+    expected[K - 1] = n * (1 - geom(p).cdf(K - 1))
+
+    stat = float(((observed - expected) ** 2 / expected).sum())
+    dof = K - 1
+    p_value = float(1 - chi2_dist.cdf(stat, dof))
+    return stat, dof, p_value
+
+
+def gaps_test(
+    draws_wide: pd.DataFrame,
+    *,
+    range_: int,
+    n_balls: int,
+    alpha: float = 0.05,
+) -> GapsResult:
+    from scipy.stats import geom
+
+    ball_cols = [f"r{i}" for i in range(1, n_balls + 1)]
+    ordered = draws_wide.sort_values("draw").reset_index(drop=True)
+    n_draws = len(ordered)
+    p_appear = n_balls / range_
+
+    rows = []
+    pvals = []
+    all_observed_gaps: list[int] = []
+
+    for ball in range(1, range_ + 1):
+        appears = (ordered[ball_cols] == ball).any(axis=1).to_numpy()
+        indices = np.where(appears)[0]
+        if len(indices) < 2:
+            rows.append({"ball": ball, "n_gaps": 0, "mean_gap": np.nan,
+                         "ks_stat": np.nan, "p_value": 1.0})
+            pvals.append(1.0)
+            continue
+        gaps = np.diff(indices)
+        all_observed_gaps.extend(gaps.tolist())
+        stat, dof, p_value = _chi2_gaps_vs_geometric(gaps, p_appear)
+        rows.append({
+            "ball": ball,
+            "n_gaps": int(len(gaps)),
+            "mean_gap": float(gaps.mean()),
+            "chi2_stat": stat,
+            "p_value": p_value,
+        })
+        pvals.append(p_value)
+
+    per_ball = pd.DataFrame(rows)
+    bonf_threshold = alpha / range_
+    per_ball["significant_at_bonferroni"] = per_ball["p_value"] < bonf_threshold
+    n_nominal = int((per_ball["p_value"] < alpha).sum())
+    n_bonf = int(per_ball["significant_at_bonferroni"].sum())
+
+    import matplotlib.pyplot as plt
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4))
+    # Left: histogram of observed gaps vs theoretical geometric PMF.
+    if all_observed_gaps:
+        all_gaps = np.array(all_observed_gaps)
+        max_gap = int(all_gaps.max())
+        bins = np.arange(1, max_gap + 2) - 0.5
+        axes[0].hist(all_gaps, bins=bins, density=True, alpha=0.6,
+                     color="steelblue", label="observed (pooled)")
+        ks = np.arange(1, max_gap + 1)
+        axes[0].plot(ks, geom(p_appear).pmf(ks), "ro-", markersize=3,
+                     label=f"geom(p={p_appear:.3f}) PMF")
+        axes[0].set_xlim(0.5, min(max_gap + 0.5, 60))
+        axes[0].set_xlabel("gap (draws between appearances)")
+        axes[0].set_ylabel("density")
+        axes[0].legend()
+        axes[0].set_title("Pooled gap distribution vs geometric PMF")
+    # Right: per-ball p-values.
+    axes[1].scatter(per_ball["ball"], per_ball["p_value"],
+                    c=np.where(per_ball["significant_at_bonferroni"], "red", "steelblue"),
+                    alpha=0.7)
+    axes[1].axhline(alpha, color="orange", linestyle=":", label=f"nominal α={alpha}")
+    axes[1].axhline(bonf_threshold, color="red", linestyle="--",
+                    label=f"Bonferroni α/range={bonf_threshold:.4f}")
+    axes[1].set_xlabel("ball")
+    axes[1].set_ylabel("K-S p-value")
+    axes[1].set_yscale("log")
+    axes[1].set_title(
+        f"K-S p-value per ball  (Bonferroni-significant: {n_bonf}/{range_})"
+    )
+    axes[1].legend()
+    fig.tight_layout()
+
+    return GapsResult(
+        n_draws=n_draws,
+        p_appear_per_draw=p_appear,
+        per_ball=per_ball,
+        n_significant_at_nominal_05=n_nominal,
+        n_significant_at_bonferroni=n_bonf,
+        bonferroni_threshold=bonf_threshold,
+        fig=fig,
+    )

@@ -11,7 +11,9 @@ matplotlib.use("Agg")
 import pandas as pd
 
 from stats.db import load_draws
-from stats.fairness import chi_square_uniformity, bayesian_fairness, correct_pvalues
+from stats.fairness import (
+    chi_square_uniformity, bayesian_fairness, correct_pvalues, gaps_test,
+)
 from stats.multivariate import cooccurrence_test
 from stats.backtest import weight_walkforward
 from stats.rollover import derive_jackpot_won
@@ -19,7 +21,7 @@ from stats.behavior import rollover_excess
 from stats.report import build_report
 
 
-ANALYSES = {"chi2", "bayes", "cooccurrence", "backtest", "behavior", "all"}
+ANALYSES = {"chi2", "bayes", "cooccurrence", "gaps", "backtest", "behavior", "all"}
 
 
 def _chi2_summary(res, *, scope: str) -> str:
@@ -137,6 +139,30 @@ def _run_cooccurrence(data) -> dict:
     }
 
 
+def _run_gaps(data) -> dict:
+    """Per-ball gap distribution vs geom(n_balls/range) (tarea 8)."""
+    res = gaps_test(data.draws_wide, range_=data.range, n_balls=data.n_balls)
+    expected_at_nominal = 0.05 * data.range
+    expected_mean_gap = data.range / data.n_balls
+    return {
+        "title": "Gap distribution (r1..r6 vs geometric)",
+        "summary": (
+            f"n_draws={res.n_draws}, p_appear={res.p_appear_per_draw:.4f}, "
+            f"expected mean gap = {expected_mean_gap:.2f}\n"
+            f"Balls significant at α=0.05 (uncorrected): "
+            f"{res.n_significant_at_nominal_05}/{data.range} "
+            f"(expected by chance ≈ {expected_at_nominal:.0f})\n"
+            f"Balls significant at Bonferroni (α/range = {res.bonferroni_threshold:.4f}): "
+            f"**{res.n_significant_at_bonferroni}**"
+        ),
+        "figure": res.fig,
+        "expected_per_spec": (
+            "0 bolas sobreviven Bonferroni; nominal cerca de 5% (~3 bolas para range=56)"
+        ),
+        "matches_expectation": res.n_significant_at_bonferroni == 0,
+    }
+
+
 def _run_backtest(data) -> dict:
     res = weight_walkforward(
         data.draws_wide, n_balls=data.n_balls, range_=data.range,
@@ -203,7 +229,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if "all" in requested:
-        requested = {"chi2", "bayes", "cooccurrence", "backtest", "behavior"}
+        requested = {"chi2", "bayes", "cooccurrence", "gaps", "backtest", "behavior"}
 
     sections = []
     if "chi2" in requested:
@@ -215,6 +241,8 @@ def main(argv: list[str] | None = None) -> int:
         sections.append(_run_bayes(data))
     if "cooccurrence" in requested:
         sections.append(_run_cooccurrence(data))
+    if "gaps" in requested:
+        sections.append(_run_gaps(data))
     if "backtest" in requested:
         sections.append(_run_backtest(data))
     if "behavior" in requested:
