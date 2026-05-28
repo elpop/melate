@@ -1,11 +1,44 @@
 # Análisis estadístico de Melate — Spec para Claude Code
 
 > **⚠️ Estado del documento:** este es el *vision document* del módulo completo (Tiers 1–4,
-> tareas 1–13). La **v1 efectivamente entregada** se implementa según
-> [`docs/superpowers/specs/2026-05-28-melate-stats-design.md`](docs/superpowers/specs/2026-05-28-melate-stats-design.md),
-> que es **canónico** para lo que está siendo construido. Si los dos documentos divergen,
-> manda el design doc para v1. Las tareas que el design doc deja fuera de v1 (6–10, 13)
-> quedan documentadas aquí como deuda explicitada para futuras iteraciones.
+> tareas 1–13). La implementación efectiva sigue el diseño detallado en
+> [`docs/superpowers/specs/2026-05-28-melate-stats-design.md`](docs/superpowers/specs/2026-05-28-melate-stats-design.md);
+> si los dos divergen en algún detalle táctico, manda el design doc.
+>
+> **🏁 ESTADO FINAL — entregado al 2026-05-28** (branch `feat/stats-v1`, 28 commits):
+>
+> | Tarea | Estado | Notas |
+> |-------|--------|-------|
+> | F0 — Acceso a datos | ✅ | `stats/db.py`, soporta `since` filter + DEFAULT_SINCE por producto |
+> | F0.5 — Rollover desde BOLSA | ✅ | `stats/rollover.py`, regla robusta de 3 vías + handling de `award=0` |
+> | 1 — χ² goodness-of-fit | ✅ | r1..r6 + r7 separado para Melate/Retro |
+> | 2 — Bonferroni / FDR | ✅ | Aplicada transversalmente cuando ≥2 χ² en el reporte |
+> | 3 — Monte Carlo | ✅ | Utilidad reservada para Tier 3+ (ver §5 design doc) |
+> | 4 — Backtest `-weight` | ✅ | Walk-forward + baseline hipergeométrico analítico |
+> | 5 — Rollover excess | ✅ | Versión v1: grid de N; versión v2 con N calibrado vía 13(a) |
+> | 6 — Bayesian Dirichlet-multinomial | ✅ | log BF + CIs por bola |
+> | 7 — Co-ocurrencia multivariada | ✅ | "El que más podría encontrar algo" → encontró cero |
+> | 8 — Gaps vs geométrica | ✅ | χ² (no K-S) — más apropiado para discreto |
+> | 9 — Runs + autocorrelación | ✅ | Por bola, Bonferroni sobre range×2 tests |
+> | 10 — Drift / Pettitt | ✅ | Por bola, Bonferroni sobre range tests |
+> | 11 — RNG criptográfico (NIST/dieharder) | ⏭ Tier 4 | Fuera de alcance v2 |
+> | 12 — Wheeling (apéndice) | ⏭ Tier 4 | No es inferencia |
+> | 13 — Scraping ganadores por categoría | 🟨 (a) | Versión fuerte inviable; versión media anual entregada |
+>
+> **🎯 Hallazgo más fuerte del proyecto:** **Retro behavior-annual: ratio=0.700, p=0.0013.**
+> Con N calibrado (~329k boletos/sorteo) de los datos anuales publicados, el ratio
+> observed/expected jackpots queda 30% por debajo de Poisson uniforme y es estadísticamente
+> significativo. Es la confirmación más limpia del balde 3 del spec
+> ("los jugadores no eligen al azar"). Melate y Revancha muestran signal direccional
+> consistente (ratio 0.77 y 0.90) pero sin significancia con 10 años de datos.
+>
+> **Otros resultados:** los 4 productos pasan limpiamente χ² marginal (post-Bonferroni),
+> Bayesiano (log BF +87 a +135, evidencia "decisiva" a favor de fair), co-ocurrencia
+> multivariada (0/1540 pairs sobreviven Bonferroni), drift (0 change-points en ninguna bola),
+> y backtest del `-weight` (todos rate ≈ baseline 0.643, p > 0.05 → el `-weight` del
+> repo demostrablemente no predice). Un solo banner ATENCIÓN persiste en Retro por gaps
+> ball 24 (p_corr=0.04), diagnosticado vía drift (p=1.0 → no es sesgo temporal, es ruido
+> familywise consistente con ~20% prob de un falso positivo en 4 productos).
 
 Proyecto base: [`elpop/melate`](https://github.com/elpop/melate) (Perl + SQLite).
 Este documento se escribió revisando el fork local `electroniccats/melate`; el código

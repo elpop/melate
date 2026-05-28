@@ -4,12 +4,70 @@
 **Autor:** Sabas (con Claude Code, vía superpowers:brainstorming)
 **Spec base:** [`melate-stats-spec.md`](../../../melate-stats-spec.md)
 **Repo base:** [`elpop/melate`](https://github.com/elpop/melate) (fork local: `electroniccats/melate`)
-**Estado:** aprobado para pasar a `writing-plans`.
+**Estado:** ✅ **completado** — alcance v1 entregado, expandido luego a Tier 3 completo
++ tarea 13(a). Branch `feat/stats-v1`, 28 commits, 83/83 tests.
 
 **Canonicidad:** este design doc es **canónico para la v1**. El spec original
 `melate-stats-spec.md` queda como *vision document* del módulo completo (Tiers 1–4) y
-referencia a este diseño para lo que efectivamente se implementa. Si los dos divergen,
-manda éste.
+ahora también incluye la tabla de status final por tarea + hallazgos clave.
+Si los dos divergen en detalle táctico, manda éste; para el estado final por tarea y
+los resultados sobre la DB real, manda el spec original.
+
+---
+
+## 0. Actualización 2026-05-28 — alcance entregado
+
+El design doc original (secciones siguientes) describía la v1 como `F0 → 1+2+3 → 4 →
+F0.5 → 5` con tareas 6–10 fuera de alcance. La implementación se expandió en sesiones
+sucesivas con el usuario para cubrir **todo el Tier 3 del spec original (tareas 6, 7,
+8, 9, 10)** y la **versión media de tarea 13** (anual, con N calibrado desde los XLSX
+de Datos Abiertos).
+
+**Lo entregado vs lo planeado:**
+
+| Lo planeado para v1 | Estado | Comentario |
+|---------------------|--------|------------|
+| F0 + F0.5 | ✅ | + sentinel `since`, regla de jackpot de 3 vías, handling de `award=0` |
+| Tarea 1 (χ²) | ✅ | + análisis separado de r7 para Melate y Retro |
+| Tarea 2 (Bonferroni) | ✅ | aplicada transversalmente cuando ≥2 χ² en el reporte |
+| Tarea 3 (Monte Carlo) | ✅ | utilidad disponible pero deliberadamente no surfaceada en CLI |
+| Tarea 4 (backtest) | ✅ | baseline analítico hipergeométrico, anti-leakage guard |
+| Tarea 5 (rollover excess) | ✅ | grid de N (v1) + N calibrado vía 13(a) |
+| **Lo añadido fuera del plan v1** | | |
+| Tarea 6 (Bayesian) | ✅ | log BF +87 a +135 a favor de fair |
+| Tarea 7 (co-ocurrencia) | ✅ | 0/1540 pairs sobreviven Bonferroni en los 4 productos |
+| Tarea 8 (gaps) | ✅ | χ² en vez de K-S (más apropiado para discreto) |
+| Tarea 9 (runs + autocorr) | ✅ | combina runs + lag-1, min-p por bola |
+| Tarea 10 (drift / Pettitt) | ✅ | diagnostica retroactivamente Retro ball 24 como ruido |
+| Tarea 13(a) (anual) | ✅ | `stats/ingest.py` parsea XLSXs → N calibrado |
+| Tarea 13(fuerte) | ❌ no viable | Per-sorteo data no expuesta por el sitio actual |
+
+**Decisión sobre `simulate_null`** (clarificada después de auditoría I-4):
+sigue como utilidad reservada para Tier 3+ donde la distribución nula no tiene forma
+cerrada manejable. La banda sanity del χ² + el conteo nominal vs Bonferroni hacen el
+trabajo para tareas 1, 7, 8, 9, 10. Decisión consciente, no gap.
+
+**Hallazgos reales sobre la DB real** (Melate desde 2008, Revancha desde 2008,
+Revanchita y Retro desde su inicio; 10,913 sorteos totales analizados, con
+DEFAULT_SINCE filtrando a era homogénea de cada producto):
+
+- **Marginal χ² (r1..r6):** los 4 productos pasan (p de 0.31 a 0.97 post-Bonferroni).
+- **r7 separado:** Melate p=0.10 (post-Bonferroni m=2), Retro p=0.54. Limpio.
+- **Bayesiano:** log BF de +87 a +135. Evidencia "decisiva" a favor de fair (Jeffreys).
+- **Co-ocurrencia multivariada:** 0 pairs sobreviven Bonferroni en los 4 productos.
+- **Gaps geom():** 0/range bolas a Bonferroni excepto Retro ball 24 (p_corr=0.04, ruido
+  confirmado vía drift).
+- **Drift Pettitt:** 0 change-points en los 4 productos.
+- **Serial independence:** 0 bolas con dependencia significativa en los 4 productos.
+- **Backtest `-weight`:** rates 0.610 a 0.956, todos p > 0.05 vs baseline analítico.
+  El feature estrella del repo Perl no predice.
+- **Rollover v1 (grid):** ratio creciente con N asumido (4.55 a N=50M para Melate).
+  Honesto como cota inferior pero opaco al lector.
+- **Rollover v2 (calibrado anual):** Melate ratio=0.769 p=0.228; Revancha 0.902 p=0.69;
+  **Retro 0.700 p=0.0013** ← significativo. N real ~329k para Retro vs ~841k para Melate.
+  Es el resultado más fuerte del balde 3.
+
+---
 
 ---
 
