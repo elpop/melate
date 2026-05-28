@@ -48,3 +48,39 @@ def test_predict_weight_recent_segment_outweighs_old():
                                  window=6, breaks=3)
     # weight(50) = 3 * 2 = 6 ; weight(10) = 3 * 1 = 3 → 50 wins
     assert picks == [50]
+
+
+from stats.backtest import walk_forward_hits, DataLeakageError
+
+
+def test_walk_forward_hits_counts_correctly():
+    """For each draw k, count hits between weight picks (using draws[:k]) and draws[k]."""
+    rows = [[1, 2, 3, 4, 5, 6],
+            [7, 8, 9, 10, 11, 12],
+            [1, 2, 3, 4, 5, 6],  # repeats r1..r6 → weight will favor [1..6]
+            [1, 2, 7, 8, 9, 10]]  # k=3: weight on [1..12], actual {1,2,7,8,9,10}
+    wide = pd.DataFrame(rows, columns=["r1", "r2", "r3", "r4", "r5", "r6"]).assign(
+        draw=range(1, 5), date=pd.Timestamp("2024-01-01"),
+        r7=pd.NA, award=30_000_000,
+    )
+    hits = walk_forward_hits(wide, n_balls=6, range_=56,
+                             window=10, breaks=2, start_at=2)
+    # We get one hit count per evaluated draw (k=2,3,4) → length 3.
+    assert len(hits) == 3
+    assert all(0 <= h <= 6 for h in hits)
+
+
+def test_walk_forward_raises_on_duplicate_draws():
+    """Duplicate draw numbers break the history-vs-target invariant — the
+    history slice would include a row with draw == target.draw, which is
+    exactly what the leakage check exists to catch.
+    """
+    rows = [[1, 2, 3, 4, 5, 6]] * 4
+    wide = pd.DataFrame(rows, columns=["r1", "r2", "r3", "r4", "r5", "r6"]).assign(
+        draw=[1, 2, 3, 3],  # duplicate at the end
+        date=pd.Timestamp("2024-01-01"),
+        r7=pd.NA, award=30_000_000,
+    )
+    with pytest.raises(DataLeakageError):
+        walk_forward_hits(wide, n_balls=6, range_=56,
+                          window=10, breaks=2, start_at=2)
